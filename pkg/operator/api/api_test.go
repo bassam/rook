@@ -20,8 +20,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/model"
-	"github.com/rook/rook/pkg/operator/k8sutil"
 	testop "github.com/rook/rook/pkg/operator/test"
 
 	"github.com/stretchr/testify/assert"
@@ -32,7 +32,7 @@ import (
 
 func TestStartAPI(t *testing.T) {
 	clientset := testop.New(3)
-	c := New(&k8sutil.Context{Clientset: clientset}, "myname", "ns", "myversion")
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "myversion")
 
 	// start a basic cluster
 	err := c.Start()
@@ -60,7 +60,7 @@ func validateStart(t *testing.T, c *Cluster) {
 
 func TestPodSpecs(t *testing.T) {
 	clientset := testop.New(1)
-	c := New(&k8sutil.Context{Clientset: clientset}, "myname", "ns", "myversion")
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "myversion")
 
 	d := c.makeDeployment()
 	assert.NotNil(t, d)
@@ -82,14 +82,14 @@ func TestPodSpecs(t *testing.T) {
 		assert.True(t, strings.HasPrefix(v.Name, "ROOKD_"))
 	}
 
-	expectedCommand := fmt.Sprintf("/usr/bin/rookd api --config-dir=/var/lib/rook --port=%d", model.Port)
+	expectedCommand := fmt.Sprintf("/usr/local/bin/rookd api --config-dir=/var/lib/rook --port=%d", model.Port)
 
 	assert.NotEqual(t, -1, strings.Index(cont.Command[2], expectedCommand), cont.Command[2])
 }
 
 func TestClusterRole(t *testing.T) {
 	clientset := testop.New(1)
-	c := New(&k8sutil.Context{Clientset: clientset}, "myname", "ns", "myversion")
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "myversion")
 
 	// the role is create
 	err := c.makeClusterRole()

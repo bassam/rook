@@ -25,9 +25,9 @@ import (
 	"os"
 	"testing"
 
-	testceph "github.com/rook/rook/pkg/cephmgr/client/test"
-	"github.com/rook/rook/pkg/cephmgr/test"
-	cephtest "github.com/rook/rook/pkg/cephmgr/test"
+	testceph "github.com/rook/rook/pkg/ceph/client/test"
+	"github.com/rook/rook/pkg/ceph/test"
+	cephtest "github.com/rook/rook/pkg/ceph/test"
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/clusterd/inventory"
 	"github.com/rook/rook/pkg/model"

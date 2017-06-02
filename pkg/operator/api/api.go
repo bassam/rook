@@ -18,6 +18,7 @@ package api
 import (
 	"fmt"
 
+	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/model"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	opmon "github.com/rook/rook/pkg/operator/mon"
@@ -52,14 +53,14 @@ var clusterAccessRules = []v1beta1.PolicyRule{
 }
 
 type Cluster struct {
-	context   *k8sutil.Context
+	context   *clusterd.Context
 	Name      string
 	Namespace string
 	Version   string
 	Replicas  int32
 }
 
-func New(context *k8sutil.Context, name, namespace, version string) *Cluster {
+func New(context *clusterd.Context, name, namespace, version string) *Cluster {
 	return &Cluster{
 		context:   context,
 		Name:      name,
@@ -164,7 +165,7 @@ func (c *Cluster) makeDeployment() *extensions.Deployment {
 
 func (c *Cluster) apiContainer() v1.Container {
 
-	command := fmt.Sprintf("/usr/bin/rookd api --config-dir=%s --port=%d ", k8sutil.DataDir, model.Port)
+	command := fmt.Sprintf("/usr/local/bin/rookd api --config-dir=%s --port=%d ", k8sutil.DataDir, model.Port)
 	return v1.Container{
 		// TODO: fix "sleep 5".
 		// Without waiting some time, there is highly probable flakes in network setup.

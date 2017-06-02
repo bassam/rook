@@ -33,7 +33,6 @@ import:
   - kubernetes/typed/core/v1
 - package: k8s.io/apimachinery
   version: release-1.6
-- package: github.com/bassam/cgosymbolizer
 - package: github.com/prometheus/client_golang
   version: v0.8.0
   subpackages:

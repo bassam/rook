@@ -23,8 +23,8 @@ import (
 	"os"
 	"testing"
 
-	testceph "github.com/rook/rook/pkg/cephmgr/client/test"
-	testclient "github.com/rook/rook/pkg/cephmgr/client/test"
+	testceph "github.com/rook/rook/pkg/ceph/client/test"
+	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	testop "github.com/rook/rook/pkg/operator/test"
 	"github.com/stretchr/testify/assert"
@@ -34,8 +34,6 @@ import (
 func TestCreateSecrets(t *testing.T) {
 	clientset := testop.New(3)
 	info := testop.CreateClusterInfo(1)
-	factory := &testclient.MockConnectionFactory{Fsid: "fsid", SecretKey: "mysecret"}
-	conn, _ := factory.NewConnWithClusterAndUser(info.Name, "user")
 	conn.(*testceph.MockConnection).MockMonCommand = func(buf []byte) (buffer []byte, info string, err error) {
 		response := "{\"key\":\"mysecurekey\"}"
 		return []byte(response), "", nil
@@ -43,9 +41,8 @@ func TestCreateSecrets(t *testing.T) {
 	c := &Cluster{Spec: Spec{VersionTag: "myversion"}}
 	c.Name = "myrook"
 	c.Namespace = "myns"
-	c.Init(&k8sutil.Context{Clientset: clientset, Factory: factory})
-	c.dataDir = "/tmp/testdir"
-	defer os.RemoveAll(c.dataDir)
+	c.Init(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}, ConfigDir: "/tmp/testdir"})
+	defer os.RemoveAll(c.context.ConfigDir)
 
 	err := c.createClientAccess(info)
 	assert.Nil(t, err)
