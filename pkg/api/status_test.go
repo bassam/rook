@@ -24,9 +24,9 @@ import (
 	"strings"
 	"testing"
 
-	ceph "github.com/rook/rook/pkg/cephmgr/client"
-	testceph "github.com/rook/rook/pkg/cephmgr/client/test"
-	"github.com/rook/rook/pkg/cephmgr/test"
+	ceph "github.com/rook/rook/pkg/ceph/client"
+	testceph "github.com/rook/rook/pkg/ceph/client/test"
+	"github.com/rook/rook/pkg/ceph/test"
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/model"
 	"github.com/rook/rook/pkg/util"
