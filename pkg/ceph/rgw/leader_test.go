@@ -19,13 +19,11 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strings"
 	"testing"
 
 	etcd "github.com/coreos/etcd/client"
 	ctx "golang.org/x/net/context"
 
-	testceph "github.com/rook/rook/pkg/ceph/client/test"
 	cephtest "github.com/rook/rook/pkg/ceph/test"
 	"github.com/rook/rook/pkg/clusterd/inventory"
 	exectest "github.com/rook/rook/pkg/util/exec/test"
@@ -43,26 +41,21 @@ func TestRGWConfig(t *testing.T) {
 		"a": &inventory.NodeConfig{PublicIP: "1.2.3.4"},
 		"b": &inventory.NodeConfig{PublicIP: "2.3.4.5"},
 	}
-	executor := &exectest.MockExecutor{}
-	context := &clusterd.Context{DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, Inventory: &inventory.Config{Nodes: nodes}},
-		ProcMan: proc.New(executor), Executor: executor, ConfigDir: "/tmp/rgw"}
-	factory.Conn = &testceph.MockConnection{
-		MockMonCommand: func(args []byte) (buffer []byte, info string, err error) {
-			switch {
-			case strings.Index(string(args), "auth get-or-create-key") != -1:
-				return []byte(`{"key":"mykey"}`), "info", nil
+	executor := &exectest.MockExecutor{
+		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
+			if args[0] == "auth" && args[1] == "get-or-create-key" {
+				return `{"key":"mykey"}`, nil
 			}
-			return nil, "", fmt.Errorf("unexpected mon_command '%s'", string(args))
-		},
-	}
-	leader := NewLeader()
-	executor.MockExecuteCommandWithOutput = func(actionName, command string, args ...string) (string, error) {
-		response := `{"keys": [
+			response := `{"keys": [
 				{"access_key": "myaccessid", "secret_key": "mybigsecretkey"}
 			]}`
 
-		return response, nil
+			return response, nil
+		},
 	}
+	context := &clusterd.Context{DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, Inventory: &inventory.Config{Nodes: nodes}},
+		ProcMan: proc.New(executor), Executor: executor, ConfigDir: "/tmp/rgw"}
+	leader := NewLeader()
 	defer os.RemoveAll("/tmp/rgw")
 	// mock a monitor
 	cephtest.CreateClusterInfo(etcdClient, []string{"mymon"})

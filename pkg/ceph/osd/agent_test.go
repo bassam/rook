@@ -26,8 +26,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	testceph "github.com/rook/rook/pkg/ceph/client/test"
 	"github.com/rook/rook/pkg/ceph/mon"
+	"github.com/rook/rook/pkg/ceph/test"
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/clusterd/inventory"
 	"github.com/rook/rook/pkg/util"
@@ -54,10 +54,9 @@ func testOSDAgentWithDevicesHelper(t *testing.T, storeConfig StoreConfig) {
 
 	clusterName := "mycluster"
 	nodeID := "abc"
-	etcdClient, agent, _ := createTestAgent(t, nodeID, "sdx,sdy", configDir, &storeConfig)
+	etcdClient, agent, executor := createTestAgent(t, nodeID, "sdx,sdy", configDir, &storeConfig)
 
 	startCount := 0
-	executor := &exectest.MockExecutor{}
 	executor.MockStartExecuteCommand = func(name string, command string, args ...string) (*exec.Cmd, error) {
 		logger.Infof("START %d for %s. %s %+v", startCount, name, command, args)
 		cmd := &exec.Cmd{Args: append([]string{command}, args...)}
@@ -137,6 +136,9 @@ func testOSDAgentWithDevicesHelper(t *testing.T, storeConfig StoreConfig) {
 	executor.MockExecuteCommandWithOutput = func(name string, command string, args ...string) (string, error) {
 		logger.Infof("OUTPUT %d for %s. %s %+v", outputExecCount, name, command, args)
 		outputExecCount++
+		if outputExecCount == 1 {
+			return "{\"key\":\"mysecurekey\", \"osdid\":3.0}", nil
+		}
 		if strings.HasPrefix(name, "lsblk /dev/disk/by-partuuid") {
 			// this is a call to get device properties so we figure out CRUSH weight, which should only be done for Bluestore
 			// (Filestore uses Statfs since it has a mounted filesystem)
@@ -296,8 +298,7 @@ func TestRemoveDevice(t *testing.T) {
 	defer os.RemoveAll(configDir)
 
 	nodeID := "a"
-	etcdClient, agent, conn := createTestAgent(t, nodeID, "", configDir, nil)
-	executor := &exectest.MockExecutor{}
+	etcdClient, agent, executor := createTestAgent(t, nodeID, "", configDir, nil)
 
 	context := &clusterd.Context{
 		DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, NodeID: nodeID, Inventory: createInventory()},
@@ -320,7 +321,7 @@ func TestRemoveDevice(t *testing.T) {
 	assert.True(t, applied.Equals(util.CreateSet([]string{"23"})), fmt.Sprintf("applied=%+v", applied))
 }
 
-func createTestAgent(t *testing.T, nodeID, devices, configDir string, storeConfig *StoreConfig) (*util.MockEtcdClient, *OsdAgent, *testceph.MockConnection) {
+func createTestAgent(t *testing.T, nodeID, devices, configDir string, storeConfig *StoreConfig) (*util.MockEtcdClient, *OsdAgent, *exectest.MockExecutor) {
 	location := "root=here"
 	forceFormat := false
 	if storeConfig == nil {
@@ -337,14 +338,13 @@ func createTestAgent(t *testing.T, nodeID, devices, configDir string, storeConfi
 			"/rook/services/ceph/osd/desired/%s/dir/%s/path", nodeID, getPseudoDir(configDir))))
 	}
 
-	conn, _ := factory.NewConnWithClusterAndUser("default", "user")
-	mockConn := conn.(*testceph.MockConnection)
-	mockConn.MockMonCommand = func(buf []byte) (buffer []byte, info string, err error) {
-		response := "{\"key\":\"mysecurekey\", \"osdid\":3.0}"
-		return []byte(response), "", nil
+	executor := &exectest.MockExecutor{
+		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
+			return "{\"key\":\"mysecurekey\", \"osdid\":3.0}", nil
+		},
 	}
 
-	return etcdClient, agent, mockConn
+	return etcdClient, agent, executor
 }
 
 func prepAgentOrchestrationData(t *testing.T, agent *OsdAgent, etcdClient *util.MockEtcdClient, context *clusterd.Context, clusterName string) {
@@ -467,7 +467,7 @@ func TestDesiredDirsState(t *testing.T) {
 func TestGetPartitionPerfScheme(t *testing.T) {
 	etcdClient := util.NewMockEtcdClient()
 	context := &clusterd.Context{DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, NodeID: "a", Inventory: createInventory()}}
-
+	test.CreateClusterInfo(etcdClient, []string{"mon0"})
 	// 3 disks: 2 for data and 1 for the metadata of both disks (2 WALs and 2 DBs)
 	context.Inventory.Local.Disks = []*inventory.LocalDisk{
 		&inventory.LocalDisk{Name: "sda", Size: 107374182400}, // 100 GB
@@ -475,6 +475,8 @@ func TestGetPartitionPerfScheme(t *testing.T) {
 		&inventory.LocalDisk{Name: "sdc", Size: 44158681088},  // 1 MB (starting offset) + 2 * (576 MB + 20 GB) = 41.125 GB
 	}
 	a := &OsdAgent{desiredDevices: []string{"sda", "sdb"}, metadataDevice: "sdc"}
+	clusterInfo, _ := mon.LoadClusterInfo(context.EtcdClient)
+	a.cluster = clusterInfo
 
 	devices, err := a.loadDesiredDevices(context)
 	assert.Nil(t, err)
@@ -482,16 +484,19 @@ func TestGetPartitionPerfScheme(t *testing.T) {
 
 	// mock monitor command to return an osd ID when the client registers/creates an osd
 	currOsdID := 10
-	mockConn.MockMonCommand = func(args []byte) (buffer []byte, info string, err error) {
-		switch {
-		case strings.Index(string(args), "osd create") != -1:
-			currOsdID++
-			return []byte(fmt.Sprintf(`{"osdid": %d}`, currOsdID)), "info", nil
-		}
-		return nil, "", fmt.Errorf("unexpected mon_command '%s'", string(args))
+	executor := &exectest.MockExecutor{
+		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
+			switch {
+			case args[0] == "osd" && args[1] == "create":
+				currOsdID++
+				return fmt.Sprintf(`{"osdid": %d}`, currOsdID), nil
+			}
+			return "", fmt.Errorf("unexpected mon_command '%v'", args)
+		},
 	}
+	context.Executor = executor
 
-	scheme, err := getPartitionPerfScheme(context, devices, StoreConfig{})
+	scheme, err := a.getPartitionPerfScheme(context, devices)
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(scheme.Entries))
 
@@ -559,7 +564,7 @@ func TestGetPartitionPerfSchemeDiskInUse(t *testing.T) {
 
 	// get the partition scheme based on the desired devices.  Since sda is already in use, the partition
 	// scheme returned should reflect that.
-	scheme, err := getPartitionPerfScheme(context, devices, StoreConfig{})
+	scheme, err := a.getPartitionPerfScheme(context, devices)
 	assert.Nil(t, err)
 
 	// the partition scheme should have a single entry for osd 1 on sda and it should have collocated data and metadata
@@ -607,7 +612,7 @@ func TestGetPartitionPerfSchemeDiskNameChanged(t *testing.T) {
 
 	// get the current partition scheme.  This should notice that the device names changed and update the
 	// partition scheme to have the latest device names
-	scheme, err := getPartitionPerfScheme(context, devices, StoreConfig{})
+	scheme, err := a.getPartitionPerfScheme(context, devices)
 	assert.Nil(t, err)
 	assert.NotNil(t, scheme)
 	assert.Equal(t, "nvme01-changed", scheme.Metadata.Device)

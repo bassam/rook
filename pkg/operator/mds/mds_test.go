@@ -21,9 +21,9 @@ import (
 	"strings"
 	"testing"
 
-	testceph "github.com/rook/rook/pkg/ceph/client/test"
 	"github.com/rook/rook/pkg/clusterd"
 	testop "github.com/rook/rook/pkg/operator/test"
+	exectest "github.com/rook/rook/pkg/util/exec/test"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -32,12 +32,13 @@ import (
 
 func TestStartMDS(t *testing.T) {
 	info := testop.CreateClusterInfo(1)
-	conn.(*testceph.MockConnection).MockMonCommand = func(buf []byte) (buffer []byte, info string, err error) {
-		response := "{\"key\":\"mysecurekey\"}"
-		return []byte(response), "", nil
+	executor := &exectest.MockExecutor{
+		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
+			return "{\"key\":\"mysecurekey\"}", nil
+		},
 	}
 
-	c := New(&clusterd.Context{}, "myname", "ns", "myversion")
+	c := New(&clusterd.Context{Executor: executor}, "myname", "ns", "myversion")
 	c.dataDir = "/tmp/mdstest"
 	defer os.RemoveAll(c.dataDir)
 

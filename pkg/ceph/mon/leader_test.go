@@ -22,10 +22,10 @@ import (
 	"time"
 
 	cephtest "github.com/rook/rook/pkg/ceph/test"
-
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/clusterd/inventory"
 	"github.com/rook/rook/pkg/util"
+	exectest "github.com/rook/rook/pkg/util/exec/test"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -114,6 +114,12 @@ func TestMoveUnhealthyMonitor(t *testing.T) {
 		return nil
 	}
 	leader := &Leader{waitForQuorum: waitForQuorum}
+	executor := &exectest.MockExecutor{
+		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
+			cephtest.CreateClusterInfo(etcdClient, []string{"a", "b", "c"})
+			return "mysecret", nil
+		},
+	}
 
 	nodes := make(map[string]*inventory.NodeConfig)
 	inv := &inventory.Config{Nodes: nodes}
@@ -124,6 +130,7 @@ func TestMoveUnhealthyMonitor(t *testing.T) {
 	context := &clusterd.Context{
 		DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, Inventory: inv},
 		ConfigDir:     "/tmp",
+		Executor:      executor,
 	}
 
 	// mock the agent responses that the deployments were successful to start mons and osds

@@ -19,8 +19,7 @@ import (
 	"os"
 	"testing"
 
-	testceph "github.com/rook/rook/pkg/ceph/client/test"
-	cephtest "github.com/rook/rook/pkg/ceph/test"
+	"github.com/rook/rook/pkg/ceph/test"
 	exectest "github.com/rook/rook/pkg/util/exec/test"
 	"github.com/rook/rook/pkg/util/proc"
 	"github.com/stretchr/testify/assert"
@@ -45,7 +44,11 @@ func TestGetSetMDSID(t *testing.T) {
 
 func TestStartMDS(t *testing.T) {
 	etcdClient := util.NewMockEtcdClient()
-	executor := &exectest.MockExecutor{}
+	executor := &exectest.MockExecutor{
+		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
+			return "{\"key\":\"mysecurekey\"}", nil
+		},
+	}
 	context := &clusterd.Context{
 		DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, NodeID: "123"},
 		Executor:      executor,
@@ -53,13 +56,7 @@ func TestStartMDS(t *testing.T) {
 		ConfigDir:     "/tmp/mds",
 	}
 	defer os.RemoveAll(context.ConfigDir)
-
-	cephtest.CreateClusterInfo(etcdClient, []string{context.NodeID})
-	conn, _ := factory.NewConnWithClusterAndUser("mycluster", "user")
-	conn.(*testceph.MockConnection).MockMonCommand = func(buf []byte) (buffer []byte, info string, err error) {
-		response := "{\"key\":\"mysecurekey\"}"
-		return []byte(response), "", nil
-	}
+	test.CreateClusterInfo(etcdClient, []string{"mon0"})
 
 	// nothing to stop without mds in desired state
 	agent := NewAgent()

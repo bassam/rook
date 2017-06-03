@@ -23,10 +23,10 @@ import (
 	"os"
 	"testing"
 
-	testceph "github.com/rook/rook/pkg/ceph/client/test"
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	testop "github.com/rook/rook/pkg/operator/test"
+	exectest "github.com/rook/rook/pkg/util/exec/test"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -34,14 +34,15 @@ import (
 func TestCreateSecrets(t *testing.T) {
 	clientset := testop.New(3)
 	info := testop.CreateClusterInfo(1)
-	conn.(*testceph.MockConnection).MockMonCommand = func(buf []byte) (buffer []byte, info string, err error) {
-		response := "{\"key\":\"mysecurekey\"}"
-		return []byte(response), "", nil
+	executor := &exectest.MockExecutor{
+		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
+			return "{\"key\":\"mysecurekey\"}", nil
+		},
 	}
 	c := &Cluster{Spec: Spec{VersionTag: "myversion"}}
 	c.Name = "myrook"
 	c.Namespace = "myns"
-	c.Init(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}, ConfigDir: "/tmp/testdir"})
+	c.Init(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}, ConfigDir: "/tmp/testdir", Executor: executor})
 	defer os.RemoveAll(c.context.ConfigDir)
 
 	err := c.createClientAccess(info)
