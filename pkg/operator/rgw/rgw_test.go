@@ -21,11 +21,11 @@ import (
 	"strings"
 	"testing"
 
-	testceph "github.com/rook/rook/pkg/ceph/client/test"
 	cephrgw "github.com/rook/rook/pkg/ceph/rgw"
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	testop "github.com/rook/rook/pkg/operator/test"
+	exectest "github.com/rook/rook/pkg/util/exec/test"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -35,12 +35,13 @@ import (
 func TestStartRGW(t *testing.T) {
 	clientset := testop.New(3)
 	info := testop.CreateClusterInfo(1)
-	conn.(*testceph.MockConnection).MockMonCommand = func(buf []byte) (buffer []byte, info string, err error) {
-		response := "{\"key\":\"mysecurekey\"}"
-		return []byte(response), "", nil
+	executor := &exectest.MockExecutor{
+		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
+			return "{\"key\":\"mysecurekey\"}", nil
+		},
 	}
 
-	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "version", k8sutil.Placement{})
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}, Executor: executor}, "myname", "ns", "version", k8sutil.Placement{})
 	c.dataDir = "/tmp/rgwtest"
 	defer os.RemoveAll(c.dataDir)
 

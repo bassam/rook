@@ -16,6 +16,7 @@ limitations under the License.
 package mon
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"path"
@@ -111,7 +112,14 @@ func TestSaveMonEndpoints(t *testing.T) {
 }
 
 func TestCheckHealth(t *testing.T) {
-	executor := &exectest.MockExecutor{}
+	executor := &exectest.MockExecutor{
+		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
+			resp := client.MonStatusResponse{Quorum: []int{0}}
+			resp.MonMap.Mons = []client.MonMapEntry{client.MonMapEntry{Name: "mon0", Rank: 0, Address: "1.2.3.4"}}
+			serialized, _ := json.Marshal(resp)
+			return string(serialized), nil
+		},
+	}
 	clientset := test.New(1)
 	context := &clusterd.Context{
 		KubeContext: clusterd.KubeContext{Clientset: clientset, RetryDelay: 1, MaxRetries: 1},

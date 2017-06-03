@@ -19,13 +19,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/rook/rook/pkg/ceph/client/test"
 	"github.com/rook/rook/pkg/ceph/mon"
 	cephtest "github.com/rook/rook/pkg/ceph/test"
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/clusterd/inventory"
 	"github.com/rook/rook/pkg/model"
 	"github.com/rook/rook/pkg/util"
+	exectest "github.com/rook/rook/pkg/util/exec/test"
 
 	"os"
 
@@ -101,8 +101,8 @@ func TestAddRemoveFileSystem(t *testing.T) {
 	etcdClient := util.NewMockEtcdClient()
 	nodes := make(map[string]*inventory.NodeConfig)
 	inv := &inventory.Config{Nodes: nodes}
-
-	context := &clusterd.Context{DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, Inventory: inv}, ConfigDir: "/tmp/file"}
+	executor := &exectest.MockExecutor{}
+	context := &clusterd.Context{DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, Inventory: inv}, Executor: executor, ConfigDir: "/tmp/file"}
 	defer os.RemoveAll(context.ConfigDir)
 
 	fs := NewFS(context, "myfs", "yourpool")
@@ -149,28 +149,33 @@ func TestAddRemoveFileSystem(t *testing.T) {
 	// deletion of a file system has more complicated interaction with ceph, set up a
 	// MockMonCommand to pass back mocked ceph data and verify the calls we are making.
 	monCmdCount := 0
-	factory.Conn = &test.MockConnection{
-		MockMonCommand: func(args []byte) (buffer []byte, info string, err error) {
-			result := []byte{}
+	executor = &exectest.MockExecutor{
+		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
+			result := ""
 			switch monCmdCount {
 			case 0:
-				assert.Contains(t, string(args), "fs set")
-				assert.Contains(t, string(args), "cluster_down")
+				assert.Equal(t, args[0], "fs")
+				assert.Equal(t, args[1], "set")
+				assert.Equal(t, args[2], "cluster_down")
 			case 1:
-				assert.Contains(t, string(args), "fs get")
-				result = []byte(CephFilesystemGetResponseRaw)
+				assert.Equal(t, args[0], "fs")
+				assert.Equal(t, args[1], "get")
+				result = CephFilesystemGetResponseRaw
 			case 2:
-				assert.Contains(t, string(args), "mds fail")
-				assert.Contains(t, string(args), "4107")
+				assert.Equal(t, args[0], "mds")
+				assert.Equal(t, args[1], "fail")
+				assert.Equal(t, args[2], "4107")
 			case 3:
-				assert.Contains(t, string(args), "fs rm")
-				assert.Contains(t, string(args), "myfs")
+				assert.Equal(t, args[0], "fs")
+				assert.Equal(t, args[1], "rm")
+				assert.Equal(t, args[1], "myfs")
 			}
 
 			monCmdCount++
-			return result, "info", nil
+			return result, nil
 		},
 	}
+	context.Executor = executor
 
 	err = leader.Configure(context)
 	assert.Nil(t, err)

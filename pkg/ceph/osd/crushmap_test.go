@@ -16,14 +16,10 @@ limitations under the License.
 package osd
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
 
-	"github.com/rook/rook/pkg/ceph/client"
-
-	testceph "github.com/rook/rook/pkg/ceph/client/test"
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/util"
 	exectest "github.com/rook/rook/pkg/util/exec/test"
@@ -45,27 +41,23 @@ func testCrushMapHelper(t *testing.T, storeConfig *StoreConfig) {
 			assert.Equal(t, Bluestore, storeConfig.StoreType)
 			return `SIZE="1234567890" TYPE="part"`, nil
 		}
+
+		assert.Equal(t, "osd", args[0])
+		assert.Equal(t, "crush", args[1])
+		assert.Equal(t, "create-or-move", args[2])
+		assert.Equal(t, "23", args[3])
+		assert.Equal(t, "1.1", args[4]) // weight
+		assert.Equal(t, 7, len(args))
+
+		// verify the contents of the CRUSH location args
+		/*argsSet := util.CreateSet(request.Args)
+		assert.True(t, argsSet.Contains("root=default"))
+		assert.True(t, argsSet.Contains("dc=datacenter1"))
+		assert.True(t, argsSet.Contains("host=node1"))*/
+		assert.Fail(t, fmt.Sprintf("Test crush args from: %+v", args))
 		return "", nil
 	}
 	context := &clusterd.Context{DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, NodeID: "node1"}, Executor: executor}
-	conn.(*testceph.MockConnection).MockMonCommand = func(buf []byte) (buffer []byte, info string, err error) {
-		var request client.MonStatusRequest
-		err = json.Unmarshal(buf, &request)
-		assert.Nil(t, err)
-		assert.Equal(t, "json", request.Format)
-		assert.Equal(t, "osd crush create-or-move", request.Prefix)
-		assert.Equal(t, 23, request.ID)
-		assert.NotEqual(t, 0.0, request.Weight)
-		assert.Equal(t, 3, len(request.Args), fmt.Sprintf("args=%v", request.Args))
-
-		// verify the contents of the CRUSH location args
-		argsSet := util.CreateSet(request.Args)
-		assert.True(t, argsSet.Contains("root=default"))
-		assert.True(t, argsSet.Contains("dc=datacenter1"))
-		assert.True(t, argsSet.Contains("host=node1"))
-
-		return []byte{}, "", nil
-	}
 
 	location := "root=default,dc=datacenter1,host=node1"
 
@@ -76,7 +68,7 @@ func testCrushMapHelper(t *testing.T, storeConfig *StoreConfig) {
 		PopulateCollocatedPerfSchemeEntry(config.partitionScheme, "sda", *storeConfig)
 	}
 
-	err := addOSDToCrushMap(context, config, location)
+	err := addOSDToCrushMap(context, config, "rook", location)
 	assert.Nil(t, err)
 
 	// location should have been stored in etcd as well
@@ -85,7 +77,7 @@ func testCrushMapHelper(t *testing.T, storeConfig *StoreConfig) {
 
 func TestGetCrushMap(t *testing.T) {
 	executor := &exectest.MockExecutor{}
-	response, err := GetCrushMap(executor)
+	response, err := GetCrushMap(&clusterd.Context{Executor: executor}, "rook")
 
 	assert.Nil(t, err)
 	assert.Equal(t, "", response)

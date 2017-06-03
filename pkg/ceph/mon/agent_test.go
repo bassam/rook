@@ -21,6 +21,7 @@ import (
 	"path"
 	"testing"
 
+	cephtest "github.com/rook/rook/pkg/ceph/test"
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/util"
 	"github.com/rook/rook/pkg/util/exec/test"
@@ -49,17 +50,14 @@ func TestMonAgent(t *testing.T) {
 	executor.MockStartExecuteCommand = func(name string, command string, args ...string) (*exec.Cmd, error) {
 		logger.Infof("START %d. %s %+v", startCommands, command, args)
 		cmd := &exec.Cmd{Args: append([]string{command}, args...)}
-		assert.Equal(t, "daemon", args[0])
-		assert.Equal(t, "--type=mon", args[1])
-		assert.Equal(t, "--", args[2])
-		assert.Equal(t, "--cluster=rookcluster", args[4])
-		assert.Equal(t, "--name=mon.mon0", args[5])
-		assert.Equal(t, "--mon-data=/tmp/mon0/mon.mon0", args[6])
-		assert.Equal(t, "--conf=/tmp/mon0/rookcluster.config", args[7])
+		assert.Equal(t, "--cluster=rookcluster", args[1])
+		assert.Equal(t, "--name=mon.mon0", args[2])
+		assert.Equal(t, "--mon-data=/tmp/mon0/mon.mon0", args[3])
+		assert.Equal(t, "--conf=/tmp/mon0/rookcluster.config", args[4])
 		switch {
 		case startCommands == 0:
-			assert.Equal(t, "--foreground", args[3])
-			assert.Equal(t, "--public-addr=1.2.3.4:2345", args[8])
+			assert.Equal(t, "--foreground", args[0])
+			assert.Equal(t, "--public-addr=1.2.3.4:2345", args[5])
 		default:
 			return cmd, fmt.Errorf("unexpected case %d", startCommands)
 		}
@@ -92,6 +90,7 @@ func TestMonAgent(t *testing.T) {
 	etcdClient.SetValue(path.Join(key, "id"), "mon0")
 	etcdClient.SetValue(path.Join(key, "ipaddress"), "1.2.3.4")
 	etcdClient.SetValue(path.Join(key, "port"), "2345")
+	cephtest.CreateClusterInfo(etcdClient, []string{"mon0"})
 
 	// now the monitor will be configured
 	err = agent.ConfigureLocalService(context)

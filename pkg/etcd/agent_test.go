@@ -35,8 +35,7 @@ func TestEtcdMgrAgent(t *testing.T) {
 	agent2 := &etcdMgrAgent{context: &mockContext, etcdFactory: &mockEmbeddedEtcdFactory}
 	etcdClient2 := util.NewMockEtcdClient()
 	context2 := &clusterd.Context{
-		EtcdClient: etcdClient2,
-		NodeID:     "node2",
+		DirectContext: clusterd.DirectContext{EtcdClient: etcdClient2, NodeID: "node2"},
 	}
 	err := agent2.Initialize(context2)
 	assert.Equal(t, "etcd", agent2.Name())

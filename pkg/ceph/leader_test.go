@@ -47,6 +47,7 @@ func TestCephLeaders(t *testing.T) {
 	context := &clusterd.Context{
 		DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, Inventory: inv},
 		ConfigDir:     "/tmp",
+		Executor:      testExecutor(),
 	}
 
 	// mock the agent responses that the deployments were successful to start mons and osds
@@ -83,7 +84,11 @@ func TestOSDRefresh(t *testing.T) {
 	nodes["b"] = &inventory.NodeConfig{PublicIP: "2.2.3.4"}
 
 	etcdClient := util.NewMockEtcdClient()
-	context := &clusterd.Context{DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, Inventory: &inventory.Config{Nodes: nodes}}, ConfigDir: "/tmp"}
+	context := &clusterd.Context{
+		DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, Inventory: &inventory.Config{Nodes: nodes}},
+		ConfigDir:     "/tmp",
+		Executor:      testExecutor(),
+	}
 
 	// mock the agent responses that the deployments were successful to start mons and osds
 	etcdClient.WatcherResponses["/rook/_notify/a/monitor/status"] = "succeeded"
@@ -145,9 +150,12 @@ func TestNewCephService(t *testing.T) {
 
 func TestCreateClusterInfo(t *testing.T) {
 	// generate the secret key from the factory
-	context := &clusterd.Context{Executor: &exectest.MockExecutor{}}
+	context := &clusterd.Context{Executor: testExecutor()}
 	info, err := mon.CreateClusterInfo(context, "")
 	assert.Nil(t, err)
+	if info == nil {
+		return
+	}
 	assert.Equal(t, "fsid", info.FSID)
 	assert.Equal(t, "admin1", info.AdminSecret)
 	assert.Equal(t, "rookcluster", info.Name)
@@ -156,4 +164,13 @@ func TestCreateClusterInfo(t *testing.T) {
 	info, err = mon.CreateClusterInfo(context, "mysupersecret")
 	assert.Equal(t, "fsid", info.FSID)
 	assert.Equal(t, "mysupersecret", info.AdminSecret)
+
+}
+
+func testExecutor() *exectest.MockExecutor {
+	return &exectest.MockExecutor{
+		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
+			return "mysecret", nil
+		},
+	}
 }

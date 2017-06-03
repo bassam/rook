@@ -48,8 +48,7 @@ func TestEtcdMgrLeaderGrow(t *testing.T) {
 	refresh := clusterd.NewRefreshEvent()
 	refresh.NodesAdded.Add("b")
 	refresh.Context = &clusterd.Context{
-		EtcdClient: etcdClient,
-		Inventory:  inv,
+		DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, Inventory: inv},
 	}
 
 	service.HandleRefresh(refresh)
@@ -90,8 +89,7 @@ func TestEtcdMgrLeaderShrink(t *testing.T) {
 	refresh := clusterd.NewRefreshEvent()
 	refresh.NodesUnhealthy["c"] = unhealthyNode
 	refresh.Context = &clusterd.Context{
-		EtcdClient: etcdClient,
-		Inventory:  inv,
+		DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, Inventory: inv},
 	}
 
 	service.HandleRefresh(refresh)

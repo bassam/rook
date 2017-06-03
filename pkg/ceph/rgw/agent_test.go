@@ -19,7 +19,6 @@ import (
 	"os"
 	"testing"
 
-	testceph "github.com/rook/rook/pkg/ceph/client/test"
 	cephtest "github.com/rook/rook/pkg/ceph/test"
 	exectest "github.com/rook/rook/pkg/util/exec/test"
 	"github.com/rook/rook/pkg/util/proc"
@@ -31,7 +30,11 @@ import (
 
 func TestStartRGW(t *testing.T) {
 	etcdClient := util.NewMockEtcdClient()
-	executor := &exectest.MockExecutor{}
+	executor := &exectest.MockExecutor{
+		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
+			return "{\"key\":\"mysecurekey\"}", nil
+		},
+	}
 	context := &clusterd.Context{
 		DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, NodeID: "123"},
 		Executor:      executor,
@@ -41,10 +44,6 @@ func TestStartRGW(t *testing.T) {
 	defer os.RemoveAll(context.ConfigDir)
 
 	cephtest.CreateClusterInfo(etcdClient, []string{context.NodeID})
-	conn.(*testceph.MockConnection).MockMonCommand = func(buf []byte) (buffer []byte, info string, err error) {
-		response := "{\"key\":\"mysecurekey\"}"
-		return []byte(response), "", nil
-	}
 
 	// nothing to stop without rgw in desired state
 	agent := NewAgent()

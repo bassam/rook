@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	testceph "github.com/rook/rook/pkg/ceph/client/test"
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/clusterd/inventory"
 	"github.com/rook/rook/pkg/util"
@@ -61,13 +60,15 @@ func TestOSDBootstrap(t *testing.T) {
 	targetPath := getBootstrapOSDKeyringPath("/tmp", clusterName)
 	defer os.Remove(targetPath)
 
-	conn.(*testceph.MockConnection).MockMonCommand = func(buf []byte) (buffer []byte, info string, err error) {
-		response := "{\"key\":\"mysecurekey\"}"
-		logger.Infof("Returning: %s", response)
-		return []byte(response), "", nil
+	executor := &exectest.MockExecutor{
+		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
+			return "{\"key\":\"mysecurekey\"}", nil
+		},
 	}
 
-	err := createOSDBootstrapKeyring(conn, "/tmp", clusterName)
+	context := &clusterd.Context{Executor: executor, ConfigDir: "/tmp/testdir"}
+	defer os.RemoveAll(context.ConfigDir)
+	err := createOSDBootstrapKeyring(context, clusterName)
 	assert.Nil(t, err)
 
 	contents, err := ioutil.ReadFile(targetPath)
