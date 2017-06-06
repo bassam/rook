@@ -90,7 +90,10 @@ func validateStart(t *testing.T, c *Cluster) {
 
 func TestSaveMonEndpoints(t *testing.T) {
 	clientset := test.New(1)
-	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "", "myversion")
+	c := New(
+		&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}, ConfigDir: "/tmp/savemons"},
+		"myname", "ns", "", "myversion")
+	defer os.RemoveAll(c.context.ConfigDir)
 	c.clusterInfo = test.CreateClusterInfo(1)
 
 	// create the initial config map
