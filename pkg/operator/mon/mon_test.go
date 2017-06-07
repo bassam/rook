@@ -26,9 +26,9 @@ import (
 	"os"
 
 	"github.com/rook/rook/pkg/ceph/client"
+	cephtest "github.com/rook/rook/pkg/ceph/test"
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/operator/test"
-
 	exectest "github.com/rook/rook/pkg/util/exec/test"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,14 +38,12 @@ import (
 func TestStartMonPods(t *testing.T) {
 	clientset := test.New(3)
 	namespace := "ns"
-	configDir := "/tmp/mytest"
+	configDir, _ := ioutil.TempDir("", "")
 	defer os.RemoveAll(configDir)
 	executor := &exectest.MockExecutor{
 		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
 			if strings.Contains(command, "ceph-authtool") {
-				os.MkdirAll(configDir, 0744)
-				ioutil.WriteFile(path.Join(configDir, namespace, "client.admin.keyring"), []byte("key = adminsecret"), 0644)
-				ioutil.WriteFile(path.Join(configDir, namespace, "mon.keyring"), []byte("key = monsecret"), 0644)
+				cephtest.CreateClusterInfo(nil, path.Join(configDir, namespace), nil)
 			}
 			return "", nil
 		},
@@ -90,10 +88,11 @@ func validateStart(t *testing.T, c *Cluster) {
 
 func TestSaveMonEndpoints(t *testing.T) {
 	clientset := test.New(1)
+	configDir, _ := ioutil.TempDir("", "")
+	defer os.RemoveAll(configDir)
 	c := New(
-		&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}, ConfigDir: "/tmp/savemons"},
+		&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}, ConfigDir: configDir},
 		"myname", "ns", "", "myversion")
-	defer os.RemoveAll(c.context.ConfigDir)
 	c.clusterInfo = test.CreateClusterInfo(1)
 
 	// create the initial config map
@@ -124,9 +123,11 @@ func TestCheckHealth(t *testing.T) {
 		},
 	}
 	clientset := test.New(1)
+	configDir, _ := ioutil.TempDir("", "")
+	defer os.RemoveAll(configDir)
 	context := &clusterd.Context{
 		KubeContext: clusterd.KubeContext{Clientset: clientset, RetryDelay: 1, MaxRetries: 1},
-		ConfigDir:   "/tmp/healthtest",
+		ConfigDir:   configDir,
 		Executor:    executor,
 	}
 	c := New(context, "myname", "ns", "", "myversion")

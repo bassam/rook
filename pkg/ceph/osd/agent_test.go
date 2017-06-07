@@ -466,8 +466,10 @@ func TestDesiredDirsState(t *testing.T) {
 
 func TestGetPartitionPerfScheme(t *testing.T) {
 	etcdClient := util.NewMockEtcdClient()
-	context := &clusterd.Context{DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, NodeID: "a", Inventory: createInventory()}}
-	test.CreateClusterInfo(etcdClient, []string{"mon0"})
+	configDir, _ := ioutil.TempDir("", "")
+	defer os.RemoveAll(configDir)
+	context := &clusterd.Context{DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, NodeID: "a", Inventory: createInventory()}, ConfigDir: configDir}
+	test.CreateClusterInfo(etcdClient, configDir, []string{"mon0"})
 	// 3 disks: 2 for data and 1 for the metadata of both disks (2 WALs and 2 DBs)
 	context.Inventory.Local.Disks = []*inventory.LocalDisk{
 		&inventory.LocalDisk{Name: "sda", Size: 107374182400}, // 100 GB

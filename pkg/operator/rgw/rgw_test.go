@@ -41,9 +41,9 @@ func TestStartRGW(t *testing.T) {
 		},
 	}
 
-	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}, Executor: executor}, "myname", "ns", "version")
-	c.dataDir = "/tmp/rgwtest"
-	defer os.RemoveAll(c.dataDir)
+	configDir, _ := ioutil.TempDir("", "")
+	defer os.RemoveAll(configDir)
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}, Executor: executor, ConfigDir: configDir}, "myname", "ns", "version")
 
 	// start a basic cluster
 	err := c.Start(info)

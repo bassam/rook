@@ -17,6 +17,7 @@ package mds
 
 import (
 	"fmt"
+	"io/ioutil"
 	"testing"
 
 	"github.com/rook/rook/pkg/ceph/mon"
@@ -102,7 +103,8 @@ func TestAddRemoveFileSystem(t *testing.T) {
 	nodes := make(map[string]*inventory.NodeConfig)
 	inv := &inventory.Config{Nodes: nodes}
 	executor := &exectest.MockExecutor{}
-	context := &clusterd.Context{DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, Inventory: inv}, Executor: executor, ConfigDir: "/tmp/file"}
+	configDir, _ := ioutil.TempDir("", "")
+	context := &clusterd.Context{DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, Inventory: inv}, Executor: executor, ConfigDir: configDir}
 	defer os.RemoveAll(context.ConfigDir)
 
 	fs := NewFS(context, "myfs", "yourpool")

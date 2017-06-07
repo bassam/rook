@@ -17,6 +17,8 @@ package mon
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"path"
 	"testing"
@@ -65,12 +67,14 @@ func TestMonAgent(t *testing.T) {
 		return cmd, nil
 	}
 
+	configDir, _ := ioutil.TempDir("", "")
+	defer os.RemoveAll(configDir)
 	etcdClient := util.NewMockEtcdClient()
 	context := &clusterd.Context{
 		DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, NodeID: "a"},
 		Executor:      executor,
 		ProcMan:       proc.New(executor),
-		ConfigDir:     "/tmp",
+		ConfigDir:     configDir,
 	}
 
 	cluster, err := createOrGetClusterInfo(context, "")
@@ -90,7 +94,9 @@ func TestMonAgent(t *testing.T) {
 	etcdClient.SetValue(path.Join(key, "id"), "mon0")
 	etcdClient.SetValue(path.Join(key, "ipaddress"), "1.2.3.4")
 	etcdClient.SetValue(path.Join(key, "port"), "2345")
-	cephtest.CreateClusterInfo(etcdClient, []string{"mon0"})
+	configDir, _ := ioutil.TempDir("", "")
+	defer os.RemoveAll(configDir)
+	cephtest.CreateClusterInfo(etcdClient, configDir, []string{"mon0"})
 
 	// now the monitor will be configured
 	err = agent.ConfigureLocalService(context)
