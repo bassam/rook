@@ -16,6 +16,8 @@ limitations under the License.
 package ceph
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 
 	etcd "github.com/coreos/etcd/client"
@@ -44,9 +46,11 @@ func TestCephLeaders(t *testing.T) {
 	nodes["a"] = &inventory.NodeConfig{PublicIP: "1.2.3.4"}
 
 	etcdClient := util.NewMockEtcdClient()
+	configDir, _ := ioutil.TempDir("", "")
+	defer os.RemoveAll(configDir)
 	context := &clusterd.Context{
 		DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, Inventory: inv},
-		ConfigDir:     "/tmp",
+		ConfigDir:     configDir,
 		Executor:      testExecutor(),
 	}
 
@@ -84,9 +88,11 @@ func TestOSDRefresh(t *testing.T) {
 	nodes["b"] = &inventory.NodeConfig{PublicIP: "2.2.3.4"}
 
 	etcdClient := util.NewMockEtcdClient()
+	configDir, _ := ioutil.TempDir("", "")
+	defer os.RemoveAll(configDir)
 	context := &clusterd.Context{
 		DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, Inventory: &inventory.Config{Nodes: nodes}},
-		ConfigDir:     "/tmp",
+		ConfigDir:     configDir,
 		Executor:      testExecutor(),
 	}
 
