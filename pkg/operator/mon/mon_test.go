@@ -16,7 +16,6 @@ limitations under the License.
 package mon
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"path"
@@ -26,6 +25,7 @@ import (
 	"os"
 
 	"github.com/rook/rook/pkg/ceph/client"
+	clienttest "github.com/rook/rook/pkg/ceph/client/test"
 	cephtest "github.com/rook/rook/pkg/ceph/test"
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/operator/test"
@@ -116,10 +116,7 @@ func TestSaveMonEndpoints(t *testing.T) {
 func TestCheckHealth(t *testing.T) {
 	executor := &exectest.MockExecutor{
 		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
-			resp := client.MonStatusResponse{Quorum: []int{0}}
-			resp.MonMap.Mons = []client.MonMapEntry{client.MonMapEntry{Name: "mon0", Rank: 0, Address: "1.2.3.4"}}
-			serialized, _ := json.Marshal(resp)
-			return string(serialized), nil
+			return clienttest.MonInQuorumResponse(), nil
 		},
 	}
 	clientset := test.New(1)
@@ -187,7 +184,7 @@ func TestMonID(t *testing.T) {
 
 func TestAvailableMonNodes(t *testing.T) {
 	clientset := test.New(1)
-	c := New(&k8sutil.Context{Clientset: clientset}, "myname", "ns", "", "myversion")
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "", "myversion")
 	c.clusterInfo = test.CreateClusterInfo(0)
 	nodes, err := c.getAvailableMonNodes()
 	assert.Nil(t, err)
@@ -204,7 +201,7 @@ func TestAvailableMonNodes(t *testing.T) {
 
 func TestAvailableNodesInUse(t *testing.T) {
 	clientset := test.New(3)
-	c := New(&k8sutil.Context{Clientset: clientset}, "myname", "ns", "", "myversion")
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "", "myversion")
 	c.clusterInfo = test.CreateClusterInfo(0)
 
 	// all three nodes are available by default
@@ -235,7 +232,7 @@ func TestAvailableNodesInUse(t *testing.T) {
 
 func TestTaintedNodes(t *testing.T) {
 	clientset := test.New(3)
-	c := New(&k8sutil.Context{Clientset: clientset}, "myname", "ns", "", "myversion")
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "", "myversion")
 	c.clusterInfo = test.CreateClusterInfo(0)
 
 	nodes, err := c.getAvailableMonNodes()

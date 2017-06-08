@@ -17,6 +17,7 @@ package rgw
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 	"testing"

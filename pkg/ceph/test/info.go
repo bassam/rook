@@ -13,7 +13,7 @@ func CreateClusterInfo(etcdClient *util.MockEtcdClient, configDir string, mons [
 	if etcdClient != nil {
 		key := "/rook/services/ceph"
 		etcdClient.SetValue(path.Join(key, "fsid"), "12345")
-		etcdClient.SetValue(path.Join(key, "name"), "default")
+		etcdClient.SetValue(path.Join(key, "name"), "rookcluster")
 		etcdClient.SetValue(path.Join(key, "_secrets/monitor"), "foo")
 		etcdClient.SetValue(path.Join(key, "_secrets/admin"), "bar")
 
