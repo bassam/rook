@@ -102,8 +102,6 @@ func TestMonOnUnhealthyNode(t *testing.T) {
 	cephtest.CreateClusterInfo(etcdClient, configDir, []string{"a"})
 
 	// the monitor is on the bad node
-	configDir, _ := ioutil.TempDir("", "")
-	defer os.RemoveAll(configDir)
 	badNode := &clusterd.UnhealthyNode{ID: "a"}
 	context := &clusterd.Context{DirectContext: clusterd.DirectContext{EtcdClient: etcdClient}, ConfigDir: configDir}
 	response, err := monsOnUnhealthyNode(context, []*clusterd.UnhealthyNode{badNode})
@@ -127,16 +125,23 @@ func TestMoveUnhealthyMonitor(t *testing.T) {
 	defer os.RemoveAll(configDir)
 	executor := &exectest.MockExecutor{
 		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
-			cephtest.CreateClusterInfo(etcdClient, path.Join(configDir, "rookcluster"), []string{"a", "b", "c"})
-			return "mysecret", nil
+			logger.Infof("OUTPUT: %s %v", command, args)
+			if command == "ceph-authtool" {
+				cephtest.CreateClusterInfo(etcdClient, path.Join(configDir, "rookcluster"), []string{"a", "b", "c"})
+				return "mysecret", nil
+			}
+			if args[0] == "mon" && args[1] == "remove" {
+				return "", nil
+			}
+			return "", fmt.Errorf("unrecognized command: %s %v", command, args)
 		},
 	}
 
 	nodes := make(map[string]*inventory.NodeConfig)
 	inv := &inventory.Config{Nodes: nodes}
-	nodes["a"] = &inventory.NodeConfig{PublicIP: "1.2.3.4"}
-	nodes["b"] = &inventory.NodeConfig{PublicIP: "2.3.4.5"}
-	nodes["c"] = &inventory.NodeConfig{PublicIP: "3.4.5.6"}
+	nodes["a"] = &inventory.NodeConfig{PublicIP: "1.2.3.0"}
+	nodes["b"] = &inventory.NodeConfig{PublicIP: "1.2.3.1"}
+	nodes["c"] = &inventory.NodeConfig{PublicIP: "1.2.3.2"}
 
 	context := &clusterd.Context{
 		DirectContext: clusterd.DirectContext{EtcdClient: etcdClient, Inventory: inv},
@@ -161,19 +166,16 @@ func TestMoveUnhealthyMonitor(t *testing.T) {
 
 	err = leader.Configure(context, "mykey")
 	assert.Nil(t, err)
-	etcdClient.Dump()
 	desiredMons := etcdClient.GetChildDirs("/rook/services/ceph/monitor/desired")
 	assert.True(t, desiredMons.Equals(util.CreateSet([]string{"d", "b", "c"})), fmt.Sprintf("%v", desiredMons))
 
 	cluster, err := LoadClusterInfo(etcdClient)
-	logger.Infof("LOADED CLUSTER: %+v", cluster)
 	assert.Nil(t, err)
 	assert.Equal(t, 3, len(cluster.Monitors))
 	mon1 := false
 	mon2 := false
 	mon3 := false
-	for _, mon := range cluster.Monitors {
-		logger.Infof("MON %s endpoint: %+v", mon.Name, mon.Endpoint)
+	for key, mon := range cluster.Monitors {
 		if strings.Contains(mon.Endpoint, nodes["a"].PublicIP) {
 			assert.Fail(t, "mon a was not removed")
 		} else if strings.Contains(mon.Endpoint, nodes["b"].PublicIP) {
@@ -183,7 +185,7 @@ func TestMoveUnhealthyMonitor(t *testing.T) {
 		} else if strings.Contains(mon.Endpoint, nodes["d"].PublicIP) {
 			mon3 = true
 		} else {
-			logger.Infof("UNRECOGNIZED MON: %s", mon.Name)
+			assert.Fail(t, "UNRECOGNIZED MON %s on node %s", mon.Name, key)
 		}
 	}
 
