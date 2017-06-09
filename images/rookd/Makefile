@@ -12,26 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: all build push
-all: build
-
 include ../image.mk
 
 # ====================================================================================
 # Image Build Options
 
-REPO ?= rookd
-IMAGE = $(REGISTRY)/$(REPO)-$(GOARCH):$(VERSION)
-CLEAN_IMAGES = $(IMAGE)
-
-# ====================================================================================
-# Ceph Build Options
-
-CEPH_BUILD_TYPE ?= release
-CEPH_ALLOCATOR ?= tcmalloc
-
-# ====================================================================================
-# Common Build Settings
+IMAGE = $(BUILD_REGISTRY)/rookd-$(GOARCH)
+IMAGES = $(IMAGE)
 
 BASEIMAGE = $(BUILD_REGISTRY)/base-$(GOARCH)
 
@@ -39,6 +26,9 @@ TEMP := $(shell mktemp -d)
 
 # ====================================================================================
 # Build Ceph
+
+CEPH_BUILD_TYPE ?= release
+CEPH_ALLOCATOR ?= tcmalloc
 
 ifeq ($(CEPH_ALLOCATOR),tcmalloc)
 EXTRA_LIBS += libgoogle-perftools4
@@ -69,17 +59,12 @@ $(ROOKD):
 # ====================================================================================
 # Build Final Image
 
-EXISTING_IMAGE_ID := $(shell docker images -q $(IMAGE))
-
-build: $(CEPH_TARBALL) $(ROOKD)
+build.images: $(CEPH_TARBALL) $(ROOKD)
 	@echo === docker build $(IMAGE)
 	@cp Dockerfile $(TEMP)
 	@cd $(TEMP) && $(SED_CMD) 's|BASEIMAGE|$(BASEIMAGE)|g' Dockerfile
 	@docker build $(BUILD_ARGS) --build-arg EXTRALIBS=$(EXTRA_LIBS) -t $(IMAGE) $(TEMP)
-	@docker rmi $(EXISTING_IMAGE_ID) > /dev/null 2>&1 || true
 	@rm -fr $(TEMP)
 
-push:
+push.image:
 	@docker push $(IMAGE)
-
-clean: clean.images
