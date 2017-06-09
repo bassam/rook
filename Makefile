@@ -181,10 +181,11 @@ build.all:
 
 release: build.all
 	@$(MAKE) -C images build.all
+	@$(MAKE) release.build
 
 publish:
 ifneq ($(filter master alpha beta stable, $(CHANNEL)),)
-	@$(MAKE) -C images push
+	@$(MAKE) release.publish
 else
 	@echo skipping publish. invalid channel "$(CHANNEL)"
 endif
@@ -196,7 +197,7 @@ else
 	@echo skipping promote. invalid channel "$(CHANNEL)"
 endif
 
-prune:
+prune: release.cleanup
 	@$(MAKE) -C images prune
 
 .PHONY: build.common cross.build cross.parallel
