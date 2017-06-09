@@ -17,8 +17,10 @@ include ../image.mk
 # ====================================================================================
 # Image Build Options
 
-IMAGE = $(BUILD_REGISTRY)/rookd-$(GOARCH)
-IMAGES = $(IMAGE)
+ROOKD_IMAGE = $(BUILD_REGISTRY)/rookd-$(GOARCH)
+ROOKD_BASE_IMAGE = $(BUILD_REGISTRY)/rookd-base-$(GOARCH)
+IMAGES = $(ROOKD_IMAGE) $(ROOKD_BASE_IMAGE)
+CACHE_IMAGES = $(ROOKD_BASE_IMAGE)
 
 BASEIMAGE = $(BUILD_REGISTRY)/base-$(GOARCH)
 
@@ -44,27 +46,27 @@ CEPH_TARBALL_FILENAME = ceph-install.tar
 CEPH_TARBALL = $(TEMP)/$(CEPH_TARBALL_FILENAME)
 
 $(CEPH_TARBALL):
-	@echo === building ceph for $(IMAGE)
+	@echo === building ceph for $(ROOKD_IMAGE)
 	@$(MAKE) -C ../ceph-build GOARCH=$(GOARCH) CEPH_ALLOCATOR=$(CEPH_ALLOCATOR) CEPH_BUILD_TYPE=$(CEPH_BUILD_TYPE) $(CEPH_TARBALL)
 
 # ====================================================================================
 # Build Rook
 
-ROOKD = $(TEMP)/rookd
-
-$(ROOKD):
-	@echo === building rookd for $(IMAGE)
-	@cp ../../bin/linux_$(GOARCH)/rookd $@
-
-# ====================================================================================
-# Build Final Image
-
-build.images: $(CEPH_TARBALL) $(ROOKD)
-	@echo === docker build $(IMAGE)
-	@cp Dockerfile $(TEMP)
+rookd-base-image:
+	@echo === docker build $(ROOKD_BASE_IMAGE)
+	@cp Dockerfile.base $(TEMP)/Dockerfile
 	@cd $(TEMP) && $(SED_CMD) 's|BASEIMAGE|$(BASEIMAGE)|g' Dockerfile
-	@docker build $(BUILD_ARGS) --build-arg EXTRALIBS=$(EXTRA_LIBS) -t $(IMAGE) $(TEMP)
-	@rm -fr $(TEMP)
+	@docker build $(BUILD_ARGS) --build-arg EXTRALIBS=$(EXTRA_LIBS) -t $(ROOKD_BASE_IMAGE) $(TEMP)
 
-push.image:
-	@docker push $(IMAGE)
+# since this is a leaf image avoid leaving around a lot of dangling images
+# by removing the last build of the final rookd image
+OLD_IMAGE_ID := $(shell docker images -q $(ROOKD_IMAGE))
+
+build.images: rookd-base-image $(CEPH_TARBALL)
+	@echo === docker build $(ROOKD_IMAGE)
+	@cp Dockerfile $(TEMP)
+	@cp ../../bin/linux_$(GOARCH)/rookd $(TEMP)
+	@cd $(TEMP) && $(SED_CMD) 's|BASEIMAGE|$(ROOKD_BASE_IMAGE)|g' Dockerfile
+	@docker build $(BUILD_ARGS) -t $(ROOKD_IMAGE) $(TEMP)
+	@[ -z "$(OLD_IMAGE_ID)" ] || docker rmi $(OLD_IMAGE_ID)
+	@rm -fr $(TEMP)
