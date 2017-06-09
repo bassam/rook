@@ -94,8 +94,7 @@ build: build.images
 
 push: push.images
 
-clean:
-	@$(MAKE) clean.images
+clean: clean.build
 
 prune: cache.prune
 

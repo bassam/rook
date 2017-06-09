@@ -161,6 +161,7 @@ vendor: go.vendor
 
 clean: go.clean
 	@rm -fr $(WORKDIR) $(RELEASE_DIR) $(BIN_DIR)
+	@make -C images clean
 
 distclean: go.distclean clean
 	@rm -fr $(DOWNLOADDIR)
@@ -173,12 +174,12 @@ cross.build.platform.%:
 
 cross.parallel: $(foreach p,$(PLATFORMS), cross.build.platform.$(p))
 
-cross:
+build.all:
 	@$(MAKE) go.init
 	@$(MAKE) go.validate
 	@$(MAKE) cross.parallel
 
-release: cross
+release: build.all
 	@$(MAKE) -C images build.all
 
 publish:
@@ -199,7 +200,7 @@ prune:
 	@$(MAKE) -C images prune
 
 .PHONY: build.common cross.build cross.parallel
-.PHONY: dev build install test check vet fmt vendor clean distclean cross images release publish promote prune
+.PHONY: dev build build.all install test check vet fmt vendor clean distclean release publish promote prune
 
 # ====================================================================================
 # Help
@@ -210,13 +211,12 @@ help:
 	@echo ''
 	@echo 'Targets:'
 	@echo '    build       Build source code for host platform.'
-	@echo '    cross       Build source code for all platforms.'
+	@echo '    build.all   Build source code for all platforms.'
 	@echo '                Best done in the cross-build container'
 	@echo '                due to cross compiler dependencies.'
 	@echo '    check       Runs unit tests.'
 	@echo '    clean       Remove all files that are created '
 	@echo '                by building.'
-	@echo '    images      Builds container images for host platform.'
 	@echo '    distclean   Remove all files that are created '
 	@echo '                by building or configuring.'
 	@echo '    fmt         Check formatting of go sources.'
