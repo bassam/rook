@@ -179,7 +179,7 @@ cross:
 	@$(MAKE) cross.parallel
 
 release: cross
-	@$(MAKE) -C images cross
+	@$(MAKE) -C images build.all
 
 publish:
 ifneq ($(filter master alpha beta stable, $(CHANNEL)),)
