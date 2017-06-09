@@ -161,7 +161,8 @@ vendor: go.vendor
 
 clean: go.clean
 	@rm -fr $(WORKDIR) $(RELEASE_DIR) $(BIN_DIR)
-	@make -C images clean
+	@$(MAKE) release.cleanup
+	@$(MAKE) -C images clean
 
 distclean: go.distclean clean
 	@rm -fr $(DOWNLOADDIR)
@@ -197,7 +198,7 @@ else
 	@echo skipping promote. invalid channel "$(CHANNEL)"
 endif
 
-prune: release.cleanup
+prune:
 	@$(MAKE) -C images prune
 
 .PHONY: build.common cross.build cross.parallel

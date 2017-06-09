@@ -74,11 +74,11 @@ publish() {
 
     [[ ${os} == "linux" ]] || return 0
 
-    publish_image $os $arch rook/rookd
+    publish_image $os $arch rookd
 # disabled for now
-#    publish_image $os $arch rook/rook
+#    publish_image $os $arch rook
 #    [[ ${arch} == "amd64" ]] || return 0
-#    publish_image $os $arch rook/toolbox
+#    publish_image $os $arch toolbox
 }
 
 promote_image() {
@@ -104,9 +104,9 @@ promote() {
 
     [[ ${os} == "linux" ]] || return 0
 
-    promote_image $os $arch rook/rookd
-#    promote_image $os $arch rook/rook
-#    promote_image $os $arch rook/toolbox
+    promote_image $os $arch rookd
+#    promote_image $os $arch rook
+#    promote_image $os $arch toolbox
 }
 
 cleanup_image() {
@@ -133,9 +133,9 @@ cleanup() {
     local arch=$2
 
     [[ ${os} == "linux" ]] || return 0
-    cleanup_image $os $arch rook/rookd
-#    cleanup_image $os $arch rook/rook
-#    cleanup_image $os $arch rook/toolbox
+    cleanup_image $os $arch rookd
+#    cleanup_image $os $arch rook
+#    cleanup_image $os $arch toolbox
 }
 
 action=$1
