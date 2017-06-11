@@ -139,11 +139,11 @@ go.build:
 go.install:
 	@$(MAKE) go.install.packages
 
-.PHONY:
+.PHONY: go.test
 go.test:
 	@echo === go test
-	@$(GOHOST) test -v -i -cover $(GO_FLAGS) $(GO_ALL_PACKAGES)
-	@$(GOHOST) test -cover $(GO_FLAGS) $(GO_ALL_PACKAGES)
+	@$(GOHOST) test -v -i -cover $(GO_PIE_FLAGS) $(GO_ALL_PACKAGES)
+	@$(GOHOST) test -cover $(GO_PIE_FLAGS) $(GO_ALL_PACKAGES)
 
 .PHONY: go.lint
 go.lint: $(GOLINT)
