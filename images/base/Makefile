@@ -41,7 +41,7 @@ rootfs-build:
 rootfs:
 	@echo === docker build $(ROOTFS_IMAGE)
 	@CID=`docker create $(ROOTFS_BUILDER_IMAGE) /bin/bash` &&\
-	  docker cp $$CID:rootfs.tar > $(TEMP)/rootfs.tar &&\
+	  docker export $$CID > $(TEMP)/rootfs.tar &&\
 	  docker rm -f $$CID
 	@cp Dockerfile.rootfs $(TEMP)/Dockerfile
 	@docker build $(BUILD_ARGS) -t $(ROOTFS_IMAGE) $(TEMP)
