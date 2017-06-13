@@ -27,12 +27,10 @@ import (
 	exectest "github.com/rook/rook/pkg/util/exec/test"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/pkg/api/v1"
 )
 
 func TestStartMDS(t *testing.T) {
-	info := testop.CreateClusterInfo(1)
 	executor := &exectest.MockExecutor{
 		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
 			return "{\"key\":\"mysecurekey\"}", nil
@@ -41,27 +39,29 @@ func TestStartMDS(t *testing.T) {
 
 	configDir, _ := ioutil.TempDir("", "")
 	defer os.RemoveAll(configDir)
-	c := New(&clusterd.Context{Executor: executor, ConfigDir: configDir}, "myname", "ns", "myversion")
+	context := &clusterd.Context{
+		Executor:    executor,
+		ConfigDir:   configDir,
+		KubeContext: clusterd.KubeContext{Clientset: testop.New(3)}}
+	c := New(context, "myname", "ns", "myversion")
 	defer os.RemoveAll(c.dataDir)
 
-	clientset := testop.New(3)
-
 	// start a basic cluster
-	err := c.Start(clientset, info)
+	err := c.Start()
 	assert.Nil(t, err)
 
-	validateStart(t, c, clientset)
+	validateStart(t, c)
 
 	// starting again should be a no-op
-	err = c.Start(clientset, info)
+	err = c.Start()
 	assert.Nil(t, err)
 
-	validateStart(t, c, clientset)
+	validateStart(t, c)
 }
 
-func validateStart(t *testing.T, c *Cluster, clientset *fake.Clientset) {
+func validateStart(t *testing.T, c *Cluster) {
 
-	r, err := clientset.ExtensionsV1beta1().Deployments(c.Namespace).Get("mds", metav1.GetOptions{})
+	r, err := c.context.Clientset.ExtensionsV1beta1().Deployments(c.Namespace).Get("mds", metav1.GetOptions{})
 	assert.Nil(t, err)
 	assert.Equal(t, "mds", r.Name)
 }

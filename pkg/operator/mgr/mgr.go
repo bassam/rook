@@ -13,30 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package mds
+package mgr
 
 import (
 	"fmt"
 
 	"github.com/coreos/pkg/capnslog"
-	cephmds "github.com/rook/rook/pkg/ceph/mds"
+	cephmgr "github.com/rook/rook/pkg/ceph/mgr"
 	"github.com/rook/rook/pkg/clusterd"
 	"github.com/rook/rook/pkg/operator/k8sutil"
 	opmon "github.com/rook/rook/pkg/operator/mon"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/pkg/api/v1"
 	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 )
 
-var logger = capnslog.NewPackageLogger("github.com/rook/rook", "op-mds")
+var logger = capnslog.NewPackageLogger("github.com/rook/rook", "op-mgr")
 
 const (
-	appName            = "mds"
-	dataPoolSuffix     = "-data"
-	metadataPoolSuffix = "-metadata"
-	keyringName        = "keyring"
+	appName     = "cephmgr"
+	keyringName = "keyring"
 )
 
 type Cluster struct {
@@ -60,63 +57,30 @@ func New(context *clusterd.Context, name, namespace, version string) *Cluster {
 }
 
 func (c *Cluster) Start() error {
-	logger.Infof("start running mds")
+	logger.Infof("start running mgr")
 
-	id := "mds1"
-	err := c.createKeyring(c.context.Clientset, id)
+	name := "1"
+	err := c.createKeyring(c.Name, name)
 	if err != nil {
 		return fmt.Errorf("failed to create mds keyring. %+v", err)
 	}
 
 	// start the deployment
-	deployment := c.makeDeployment(id)
+	deployment := c.makeDeployment(name)
 	_, err = c.context.Clientset.ExtensionsV1beta1().Deployments(c.Namespace).Create(deployment)
 	if err != nil {
 		if !errors.IsAlreadyExists(err) {
-			return fmt.Errorf("failed to create mds deployment. %+v", err)
+			return fmt.Errorf("failed to create mgr deployment. %+v", err)
 		}
-		logger.Infof("mds deployment already exists")
+		logger.Infof("mgr deployment already exists")
 	} else {
-		logger.Infof("mds deployment started")
+		logger.Infof("mgr deployment started")
 	}
 
 	return nil
 }
 
-func (c *Cluster) createKeyring(clientset kubernetes.Interface, id string) error {
-	_, err := clientset.CoreV1().Secrets(c.Namespace).Get(appName, metav1.GetOptions{})
-	if err == nil {
-		logger.Infof("the mds keyring was already generated")
-		return nil
-	}
-	if !errors.IsNotFound(err) {
-		return fmt.Errorf("failed to get mds secrets. %+v", err)
-	}
-
-	// get-or-create-key for the user account
-	keyring, err := cephmds.CreateKeyring(c.context, c.Name, id)
-	if err != nil {
-		return fmt.Errorf("failed to create mds keyring. %+v", err)
-	}
-
-	// Store the keyring in a secret
-	secrets := map[string]string{
-		keyringName: keyring,
-	}
-	secret := &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: appName, Namespace: c.Namespace},
-		StringData: secrets,
-		Type:       k8sutil.RookType,
-	}
-	_, err = clientset.CoreV1().Secrets(c.Namespace).Create(secret)
-	if err != nil {
-		return fmt.Errorf("failed to save mds secrets. %+v", err)
-	}
-
-	return nil
-}
-
-func (c *Cluster) makeDeployment(id string) *extensions.Deployment {
+func (c *Cluster) makeDeployment(name string) *extensions.Deployment {
 	deployment := &extensions.Deployment{}
 	deployment.Name = appName
 	deployment.Namespace = c.Namespace
@@ -128,7 +92,7 @@ func (c *Cluster) makeDeployment(id string) *extensions.Deployment {
 			Annotations: map[string]string{},
 		},
 		Spec: v1.PodSpec{
-			Containers:    []v1.Container{c.mdsContainer(id)},
+			Containers:    []v1.Container{c.mgrContainer(name)},
 			RestartPolicy: v1.RestartPolicyAlways,
 			Volumes: []v1.Volume{
 				{Name: k8sutil.DataDirVolume, VolumeSource: v1.VolumeSource{EmptyDir: &v1.EmptyDirVolumeSource{}}},
@@ -138,17 +102,14 @@ func (c *Cluster) makeDeployment(id string) *extensions.Deployment {
 	}
 
 	deployment.Spec = extensions.DeploymentSpec{Template: podSpec, Replicas: &c.Replicas}
-
 	return deployment
 }
 
-func (c *Cluster) mdsContainer(id string) v1.Container {
+func (c *Cluster) mgrContainer(name string) v1.Container {
 
-	command := fmt.Sprintf("/usr/local/bin/rookd mds --config-dir=%s --mds-id=%s ",
-		k8sutil.DataDir, id)
+	command := fmt.Sprintf("/usr/local/bin/rookd mgr --config-dir=%s", k8sutil.DataDir)
 	return v1.Container{
-		// TODO: fix "sleep 5".
-		// Without waiting some time, there is highly probable flakes in network setup.
+		// FIX: sleep 5 for a flaky network setup
 		Command: []string{"/bin/sh", "-c", fmt.Sprintf("sleep 5; %s", command)},
 		Name:    appName,
 		Image:   k8sutil.MakeRookImage(c.Version),
@@ -157,7 +118,8 @@ func (c *Cluster) mdsContainer(id string) v1.Container {
 			k8sutil.ConfigOverrideMount(),
 		},
 		Env: []v1.EnvVar{
-			{Name: "ROOKD_MDS_KEYRING", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: appName}, Key: keyringName}}},
+			{Name: "ROOKD_MGR_NAME", Value: name},
+			{Name: "ROOKD_MGR_KEYRING", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: appName}, Key: keyringName}}},
 			opmon.ClusterNameEnvVar(c.Name),
 			opmon.MonEndpointEnvVar(),
 			opmon.MonSecretEnvVar(),
@@ -172,4 +134,37 @@ func (c *Cluster) getLabels() map[string]string {
 		k8sutil.AppAttr:     appName,
 		k8sutil.ClusterAttr: c.Namespace,
 	}
+}
+
+func (c *Cluster) createKeyring(clusterName, name string) error {
+	_, err := c.context.Clientset.CoreV1().Secrets(c.Namespace).Get(appName, metav1.GetOptions{})
+	if err == nil {
+		logger.Infof("the mgr keyring was already generated")
+		return nil
+	}
+	if !errors.IsNotFound(err) {
+		return fmt.Errorf("failed to get mgr secrets. %+v", err)
+	}
+
+	// get-or-create-key for the user account
+	keyring, err := cephmgr.CreateKeyring(c.context, clusterName, name)
+	if err != nil {
+		return fmt.Errorf("failed to create mgr keyring. %+v", err)
+	}
+
+	// Store the keyring in a secret
+	secrets := map[string]string{
+		keyringName: keyring,
+	}
+	secret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: appName, Namespace: c.Namespace},
+		StringData: secrets,
+		Type:       k8sutil.RookType,
+	}
+	_, err = c.context.Clientset.CoreV1().Secrets(c.Namespace).Create(secret)
+	if err != nil {
+		return fmt.Errorf("failed to save mgr secrets. %+v", err)
+	}
+
+	return nil
 }

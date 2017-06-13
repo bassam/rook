@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package rgw
+package mgr
 
 import (
 	"fmt"
@@ -22,19 +22,15 @@ import (
 	"strings"
 	"testing"
 
-	cephrgw "github.com/rook/rook/pkg/ceph/rgw"
 	"github.com/rook/rook/pkg/clusterd"
-	"github.com/rook/rook/pkg/operator/k8sutil"
 	testop "github.com/rook/rook/pkg/operator/test"
 	exectest "github.com/rook/rook/pkg/util/exec/test"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/pkg/api/v1"
 )
 
-func TestStartRGW(t *testing.T) {
-	clientset := testop.New(3)
+func TestStartMGR(t *testing.T) {
 	executor := &exectest.MockExecutor{
 		MockExecuteCommandWithOutput: func(actionName string, command string, args ...string) (string, error) {
 			return "{\"key\":\"mysecurekey\"}", nil
@@ -43,61 +39,54 @@ func TestStartRGW(t *testing.T) {
 
 	configDir, _ := ioutil.TempDir("", "")
 	defer os.RemoveAll(configDir)
-	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}, Executor: executor, ConfigDir: configDir}, "myname", "ns", "version")
+	context := &clusterd.Context{
+		Executor:    executor,
+		ConfigDir:   configDir,
+		KubeContext: clusterd.KubeContext{Clientset: testop.New(3)}}
+	c := New(context, "myname", "ns", "myversion")
+	defer os.RemoveAll(c.dataDir)
 
-	// start a basic cluster
+	// start a basic service
 	err := c.Start()
 	assert.Nil(t, err)
 
-	validateStart(t, c, clientset)
+	validateStart(t, c)
 
 	// starting again should be a no-op
 	err = c.Start()
 	assert.Nil(t, err)
 
-	validateStart(t, c, clientset)
+	validateStart(t, c)
 }
 
-func validateStart(t *testing.T, c *Cluster, clientset *fake.Clientset) {
+func validateStart(t *testing.T, c *Cluster) {
 
-	r, err := clientset.ExtensionsV1beta1().Deployments(c.Namespace).Get("rgw", metav1.GetOptions{})
+	r, err := c.context.Clientset.ExtensionsV1beta1().Deployments(c.Namespace).Get(appName, metav1.GetOptions{})
 	assert.Nil(t, err)
-	assert.Equal(t, "rgw", r.Name)
-
-	s, err := clientset.CoreV1().Services(c.Namespace).Get("rgw", metav1.GetOptions{})
-	assert.Nil(t, err)
-	assert.Equal(t, "rgw", s.Name)
-
-	secret, err := clientset.CoreV1().Secrets(c.Namespace).Get("rgw", metav1.GetOptions{})
-	assert.Nil(t, err)
-	assert.Equal(t, "rgw", secret.Name)
-	assert.Equal(t, 1, len(secret.StringData))
-
+	assert.Equal(t, appName, r.Name)
 }
 
-func TestPodSpecs(t *testing.T) {
+func TestPodSpec(t *testing.T) {
 	c := New(nil, "myname", "ns", "myversion")
 
-	d := c.makeDeployment()
+	d := c.makeDeployment("mgr1")
 	assert.NotNil(t, d)
-	assert.Equal(t, "rgw", d.Name)
+	assert.Equal(t, appName, d.Name)
 	assert.Equal(t, v1.RestartPolicyAlways, d.Spec.Template.Spec.RestartPolicy)
 	assert.Equal(t, 2, len(d.Spec.Template.Spec.Volumes))
 	assert.Equal(t, "rook-data", d.Spec.Template.Spec.Volumes[0].Name)
-	assert.Equal(t, k8sutil.ConfigOverrideName, d.Spec.Template.Spec.Volumes[1].Name)
 
-	assert.Equal(t, "rgw", d.ObjectMeta.Name)
-	assert.Equal(t, "rgw", d.Spec.Template.ObjectMeta.Labels["app"])
+	assert.Equal(t, appName, d.ObjectMeta.Name)
+	assert.Equal(t, appName, d.Spec.Template.ObjectMeta.Labels["app"])
 	assert.Equal(t, c.Namespace, d.Spec.Template.ObjectMeta.Labels["rook_cluster"])
 	assert.Equal(t, 0, len(d.ObjectMeta.Annotations))
 
 	cont := d.Spec.Template.Spec.Containers[0]
 	assert.Equal(t, "quay.io/rook/rookd:myversion", cont.Image)
 	assert.Equal(t, 2, len(cont.VolumeMounts))
-	assert.Equal(t, 6, len(cont.Env))
+	assert.Equal(t, 7, len(cont.Env))
 
-	expectedCommand := fmt.Sprintf("/usr/local/bin/rookd rgw --config-dir=/var/lib/rook --rgw-port=%d --rgw-host=%s",
-		cephrgw.RGWPort, cephrgw.DNSName)
+	expectedCommand := fmt.Sprintf("/usr/local/bin/rookd mgr --config-dir=/var/lib/rook")
 
 	assert.NotEqual(t, -1, strings.Index(cont.Command[2], expectedCommand), cont.Command[2])
 }

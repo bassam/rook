@@ -45,7 +45,7 @@ func (s *clusterHandler) GetClusterInfo() (*mon.ClusterInfo, error) {
 func (s *clusterHandler) EnableObjectStore() error {
 	logger.Infof("Starting the Object store")
 	r := k8srgw.New(s.context, s.clusterInfo.Name, s.namespace, s.versionTag)
-	err := r.Start(s.clusterInfo)
+	err := r.Start()
 	if err != nil {
 		return fmt.Errorf("failed to start rgw. %+v", err)
 	}
@@ -75,7 +75,7 @@ func (s *clusterHandler) GetObjectStoreConnectionInfo() (*model.ObjectStoreConne
 func (s *clusterHandler) StartFileSystem(fs *model.FilesystemRequest) error {
 	logger.Infof("Starting the MDS")
 	c := k8smds.New(s.context, s.clusterInfo.Name, s.namespace, s.versionTag)
-	return c.Start(s.context.Clientset, s.clusterInfo)
+	return c.Start()
 }
 
 func (s *clusterHandler) RemoveFileSystem(fs *model.FilesystemRequest) error {
