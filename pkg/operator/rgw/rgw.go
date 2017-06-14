@@ -39,16 +39,14 @@ const (
 
 type Cluster struct {
 	context   *clusterd.Context
-	Name      string
 	Namespace string
 	Version   string
 	Replicas  int32
 }
 
-func New(context *clusterd.Context, name, namespace, version string) *Cluster {
+func New(context *clusterd.Context, namespace, version string) *Cluster {
 	return &Cluster{
 		context:   context,
-		Name:      name,
 		Namespace: namespace,
 		Version:   version,
 		Replicas:  2,
@@ -96,7 +94,7 @@ func (c *Cluster) createKeyring() error {
 
 	// create the keyring
 	logger.Infof("generating rgw keyring")
-	keyring, err := cephrgw.CreateKeyring(c.context, c.Name)
+	keyring, err := cephrgw.CreateKeyring(c.context, c.Namespace)
 	if err != nil {
 		return fmt.Errorf("failed to create keyring. %+v", err)
 	}
@@ -160,7 +158,7 @@ func (c *Cluster) rgwContainer() v1.Container {
 		},
 		Env: []v1.EnvVar{
 			{Name: "ROOKD_RGW_KEYRING", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: appName}, Key: keyringName}}},
-			opmon.ClusterNameEnvVar(c.Name),
+			opmon.ClusterNameEnvVar(c.Namespace),
 			opmon.MonEndpointEnvVar(),
 			opmon.MonSecretEnvVar(),
 			opmon.AdminSecretEnvVar(),

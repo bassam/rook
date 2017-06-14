@@ -57,16 +57,14 @@ var clusterAccessRules = []v1beta1.PolicyRule{
 
 type Cluster struct {
 	context   *clusterd.Context
-	Name      string
 	Namespace string
 	Version   string
 	Replicas  int32
 }
 
-func New(context *clusterd.Context, name, namespace, version string) *Cluster {
+func New(context *clusterd.Context, namespace, version string) *Cluster {
 	return &Cluster{
 		context:   context,
-		Name:      name,
 		Namespace: namespace,
 		Version:   version,
 		Replicas:  1,
@@ -185,7 +183,7 @@ func (c *Cluster) apiContainer() v1.Container {
 			opmon.MonSecretEnvVar(),
 			opmon.AdminSecretEnvVar(),
 			opmon.MonEndpointEnvVar(),
-			opmon.ClusterNameEnvVar(c.Name),
+			opmon.ClusterNameEnvVar(c.Namespace),
 		},
 	}
 }

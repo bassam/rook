@@ -41,7 +41,6 @@ const (
 
 type Cluster struct {
 	context         *clusterd.Context
-	Name            string
 	Namespace       string
 	Keyring         string
 	Version         string
@@ -49,10 +48,9 @@ type Cluster struct {
 	dataDirHostPath string
 }
 
-func New(context *clusterd.Context, name, namespace, version string, storageSpec StorageSpec, dataDirHostPath string) *Cluster {
+func New(context *clusterd.Context, namespace, version string, storageSpec StorageSpec, dataDirHostPath string) *Cluster {
 	return &Cluster{
 		context:         context,
-		Name:            name,
 		Namespace:       namespace,
 		Version:         version,
 		Storage:         storageSpec,
@@ -173,7 +171,7 @@ func (c *Cluster) osdContainer(devices []Device, directories []Directory, select
 
 	envVars := []v1.EnvVar{
 		hostnameEnvVar(),
-		opmon.ClusterNameEnvVar(c.Name),
+		opmon.ClusterNameEnvVar(c.Namespace),
 		opmon.MonEndpointEnvVar(),
 		opmon.MonSecretEnvVar(),
 		opmon.AdminSecretEnvVar(),

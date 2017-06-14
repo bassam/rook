@@ -43,7 +43,7 @@ func TestStartRGW(t *testing.T) {
 
 	configDir, _ := ioutil.TempDir("", "")
 	defer os.RemoveAll(configDir)
-	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}, Executor: executor, ConfigDir: configDir}, "myname", "ns", "version")
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}, Executor: executor, ConfigDir: configDir}, "ns", "version")
 
 	// start a basic cluster
 	err := c.Start()
@@ -76,7 +76,7 @@ func validateStart(t *testing.T, c *Cluster, clientset *fake.Clientset) {
 }
 
 func TestPodSpecs(t *testing.T) {
-	c := New(nil, "myname", "ns", "myversion")
+	c := New(nil, "ns", "myversion")
 
 	d := c.makeDeployment()
 	assert.NotNil(t, d)

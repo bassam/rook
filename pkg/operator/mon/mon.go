@@ -50,7 +50,6 @@ const (
 
 type Cluster struct {
 	context         *clusterd.Context
-	Name            string
 	Namespace       string
 	Keyring         string
 	Version         string
@@ -70,11 +69,10 @@ type MonConfig struct {
 	Port int32
 }
 
-func New(context *clusterd.Context, name, namespace, dataDirHostPath, version string) *Cluster {
+func New(context *clusterd.Context, namespace, dataDirHostPath, version string) *Cluster {
 	return &Cluster{
 		context:         context,
 		dataDirHostPath: dataDirHostPath,
-		Name:            name,
 		Namespace:       namespace,
 		Version:         version,
 		Size:            3,

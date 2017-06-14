@@ -32,7 +32,7 @@ import (
 
 func TestStartDaemonset(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
-	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "myversion", StorageSpec{}, "")
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "ns", "myversion", StorageSpec{}, "")
 
 	// Start the first time
 	err := c.Start()
@@ -44,7 +44,7 @@ func TestStartDaemonset(t *testing.T) {
 }
 
 func TestPodContainer(t *testing.T) {
-	cluster := &Cluster{Name: "myosd", Version: "23"}
+	cluster := &Cluster{Namespace: "myosd", Version: "23"}
 	config := Config{}
 	c := cluster.podTemplateSpec([]Device{}, []Directory{}, Selection{}, config)
 	assert.NotNil(t, c)
@@ -69,7 +69,7 @@ func testPodDevices(t *testing.T, dataDir, deviceFilter string, allDevices bool)
 	}
 
 	clientset := fake.NewSimpleClientset()
-	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "myversion", storageSpec, dataDir)
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "ns", "myversion", storageSpec, dataDir)
 
 	n := c.Storage.resolveNode(storageSpec.Nodes[0].Name)
 	replicaSet := c.makeReplicaSet(n.Name, n.Devices, n.Directories, n.Selection, n.Config)
@@ -144,7 +144,7 @@ func TestStorageSpecDevicesAndDirectories(t *testing.T) {
 	}
 
 	clientset := fake.NewSimpleClientset()
-	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "myversion", storageSpec, "")
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "ns", "myversion", storageSpec, "")
 
 	n := c.Storage.resolveNode(storageSpec.Nodes[0].Name)
 	replicaSet := c.makeReplicaSet(n.Name, n.Devices, n.Directories, n.Selection, n.Config)
@@ -186,7 +186,7 @@ func TestStorageSpecConfig(t *testing.T) {
 	}
 
 	clientset := fake.NewSimpleClientset()
-	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "myversion", storageSpec, "")
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "ns", "myversion", storageSpec, "")
 
 	n := c.Storage.resolveNode(storageSpec.Nodes[0].Name)
 	replicaSet := c.makeReplicaSet(n.Name, n.Devices, n.Directories, n.Selection, n.Config)

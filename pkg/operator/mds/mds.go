@@ -40,7 +40,6 @@ const (
 )
 
 type Cluster struct {
-	Name      string
 	Namespace string
 	Version   string
 	Replicas  int32
@@ -48,10 +47,9 @@ type Cluster struct {
 	dataDir   string
 }
 
-func New(context *clusterd.Context, name, namespace, version string) *Cluster {
+func New(context *clusterd.Context, namespace, version string) *Cluster {
 	return &Cluster{
 		context:   context,
-		Name:      name,
 		Namespace: namespace,
 		Version:   version,
 		Replicas:  1,
@@ -94,7 +92,7 @@ func (c *Cluster) createKeyring(clientset kubernetes.Interface, id string) error
 	}
 
 	// get-or-create-key for the user account
-	keyring, err := cephmds.CreateKeyring(c.context, c.Name, id)
+	keyring, err := cephmds.CreateKeyring(c.context, c.Namespace, id)
 	if err != nil {
 		return fmt.Errorf("failed to create mds keyring. %+v", err)
 	}
@@ -158,7 +156,7 @@ func (c *Cluster) mdsContainer(id string) v1.Container {
 		},
 		Env: []v1.EnvVar{
 			{Name: "ROOKD_MDS_KEYRING", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: appName}, Key: keyringName}}},
-			opmon.ClusterNameEnvVar(c.Name),
+			opmon.ClusterNameEnvVar(c.Namespace),
 			opmon.MonEndpointEnvVar(),
 			opmon.MonSecretEnvVar(),
 			opmon.AdminSecretEnvVar(),

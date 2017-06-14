@@ -32,7 +32,7 @@ import (
 
 func TestStartAPI(t *testing.T) {
 	clientset := testop.New(3)
-	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "myversion")
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "ns", "myversion")
 
 	// start a basic cluster
 	err := c.Start()
@@ -60,7 +60,7 @@ func validateStart(t *testing.T, c *Cluster) {
 
 func TestPodSpecs(t *testing.T) {
 	clientset := testop.New(1)
-	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "myversion")
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "ns", "myversion")
 
 	d := c.makeDeployment()
 	assert.NotNil(t, d)
@@ -89,7 +89,7 @@ func TestPodSpecs(t *testing.T) {
 
 func TestClusterRole(t *testing.T) {
 	clientset := testop.New(1)
-	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "myversion")
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "ns", "myversion")
 
 	// the role is create
 	err := c.makeClusterRole()

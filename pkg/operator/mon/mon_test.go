@@ -53,7 +53,7 @@ func TestStartMonPods(t *testing.T) {
 		Executor:    executor,
 		ConfigDir:   configDir,
 	}
-	c := New(context, "myname", namespace, "", "myversion")
+	c := New(context, namespace, "", "myversion")
 
 	// start a basic cluster
 	// an error is expected since mocking always creates pods that are not running
@@ -90,9 +90,7 @@ func TestSaveMonEndpoints(t *testing.T) {
 	clientset := test.New(1)
 	configDir, _ := ioutil.TempDir("", "")
 	defer os.RemoveAll(configDir)
-	c := New(
-		&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}, ConfigDir: configDir},
-		"myname", "ns", "", "myversion")
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}, ConfigDir: configDir}, "ns", "", "myversion")
 	c.clusterInfo = test.CreateClusterInfo(1)
 
 	// create the initial config map
@@ -127,7 +125,7 @@ func TestCheckHealth(t *testing.T) {
 		ConfigDir:   configDir,
 		Executor:    executor,
 	}
-	c := New(context, "myname", "ns", "", "myversion")
+	c := New(context, "ns", "", "myversion")
 	c.clusterInfo = test.CreateClusterInfo(1)
 	c.waitForStart = false
 	defer os.RemoveAll(c.context.ConfigDir)
@@ -184,7 +182,7 @@ func TestMonID(t *testing.T) {
 
 func TestAvailableMonNodes(t *testing.T) {
 	clientset := test.New(1)
-	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "", "myversion")
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "ns", "", "myversion")
 	c.clusterInfo = test.CreateClusterInfo(0)
 	nodes, err := c.getAvailableMonNodes()
 	assert.Nil(t, err)
@@ -201,7 +199,7 @@ func TestAvailableMonNodes(t *testing.T) {
 
 func TestAvailableNodesInUse(t *testing.T) {
 	clientset := test.New(3)
-	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "", "myversion")
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "ns", "", "myversion")
 	c.clusterInfo = test.CreateClusterInfo(0)
 
 	// all three nodes are available by default
@@ -232,7 +230,7 @@ func TestAvailableNodesInUse(t *testing.T) {
 
 func TestTaintedNodes(t *testing.T) {
 	clientset := test.New(3)
-	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "myname", "ns", "", "myversion")
+	c := New(&clusterd.Context{KubeContext: clusterd.KubeContext{Clientset: clientset}}, "ns", "", "myversion")
 	c.clusterInfo = test.CreateClusterInfo(0)
 
 	nodes, err := c.getAvailableMonNodes()
