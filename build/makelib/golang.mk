@@ -131,7 +131,7 @@ go.install.packages.$(1):
 go.install.packages: go.install.packages.$(1)
 endef
 
-$(foreach p,$(GO_PACKAGES),$(eval $(call go.project,$(lastword $(subst /, ,$(p))),$(p),,$(GO_FLAGS))))
+$(foreach p,$(GO_PACKAGES),$(eval $(call go.project,$(lastword $(subst /, ,$(p))),$(p),CGO_ENABLED=1,$(GO_FLAGS))))
 $(foreach p,$(GO_STATIC_PACKAGES),$(eval $(call go.project,$(lastword $(subst /, ,$(p))),$(p),CGO_ENABLED=0,$(GO_STATIC_FLAGS))))
 
 .PHONY: go.build
