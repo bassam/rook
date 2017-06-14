@@ -91,10 +91,10 @@ CHANNEL ?=
 CLIENT_PACKAGES = $(GO_PROJECT)
 SERVER_PACKAGES = $(GO_PROJECT)/cmd/rookd
 
+GO_PACKAGES =
 ifneq ($(filter $(GOOS)_$(GOARCH),$(CLIENT_PLATFORMS) $(SERVER_PLATFORMS)),)
-GO_PACKAGES = $(CLIENT_PACKAGES)
+GO_PACKAGES += $(CLIENT_PACKAGES)
 endif
-
 ifneq ($(filter $(GOOS)_$(GOARCH),$(SERVER_PLATFORMS)),)
 GO_PACKAGES += $(SERVER_PACKAGES)
 endif
@@ -134,6 +134,14 @@ ifneq ($(GOOS),linux)
 endif
 	@$(MAKE) -C images
 
+cross.build.platform.%:
+	@$(MAKE) GOOS=$(word 1, $(subst _, ,$*)) GOARCH=$(word 2, $(subst _, ,$*)) PIE=$(PIE) go.build
+
+cross.build.parallel: $(foreach p,$(PLATFORMS), cross.build.platform.$(p))
+
+build.all: build.common
+	@$(MAKE) cross.build.parallel
+
 install: build.common
 	@$(MAKE) go.install
 
@@ -162,19 +170,6 @@ clean: go.clean
 distclean: go.distclean clean
 	@rm -fr $(DOWNLOADDIR)
 
-cross.build:
-	@$(MAKE) go.build
-
-cross.build.platform.%:
-	@$(MAKE) GOOS=$(word 1, $(subst _, ,$*)) GOARCH=$(word 2, $(subst _, ,$*)) PIE=$(PIE) cross.build
-
-cross.parallel: $(foreach p,$(PLATFORMS), cross.build.platform.$(p))
-
-build.all:
-	@$(MAKE) go.init
-	@$(MAKE) go.validate
-	@$(MAKE) cross.parallel
-
 release: build.all
 	@$(MAKE) -C images build.all
 	@$(MAKE) release.build
@@ -196,7 +191,7 @@ endif
 prune:
 	@$(MAKE) -C images prune
 
-.PHONY: build.common cross.build cross.parallel
+.PHONY: build.common cross.build.parallel
 .PHONY: dev build build.all install test check vet fmt vendor clean distclean release publish promote prune
 
 # ====================================================================================
