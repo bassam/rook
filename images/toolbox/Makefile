@@ -24,7 +24,7 @@ BASEIMAGE = $(BUILD_REGISTRY)/rookd-base-$(GOARCH)
 TEMP := $(shell mktemp -d)
 
 toolbox-base-image:
-	@echo === docker build $(TOOBLOX_BASE_IMAGE)
+	@echo === docker build $(TOOLBOX_BASE_IMAGE)
 	@cp Dockerfile.base $(TEMP)/Dockerfile
 	@cd $(TEMP) && $(SED_CMD) 's|BASEIMAGE|$(BASEIMAGE)|g' Dockerfile
 	@docker build $(BUILD_ARGS) -t $(TOOLBOX_BASE_IMAGE) $(TEMP)
