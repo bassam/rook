@@ -35,7 +35,7 @@ import (
 var logger = capnslog.NewPackageLogger("github.com/rook/rook", "op-mon")
 
 const (
-	appName           = "rook-cephmon"
+	appName           = "rook-ceph-mon"
 	monNodeAttr       = "mon_node"
 	monClusterAttr    = "mon_cluster"
 	tprName           = "mon.rook.io"

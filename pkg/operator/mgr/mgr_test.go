@@ -62,7 +62,7 @@ func validateStart(t *testing.T, c *Cluster) {
 
 	for i := 0; i < c.Replicas; i++ {
 		logger.Infof("Looking for cephmgr replica %d", i)
-		_, err := c.context.Clientset.ExtensionsV1beta1().Deployments(c.Namespace).Get(fmt.Sprintf("rook-cephmgr%d", i), metav1.GetOptions{})
+		_, err := c.context.Clientset.ExtensionsV1beta1().Deployments(c.Namespace).Get(fmt.Sprintf("rook-ceph-mgr%d", i), metav1.GetOptions{})
 		assert.Nil(t, err)
 	}
 }
