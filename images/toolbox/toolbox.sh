@@ -47,6 +47,7 @@ EOF
     MON_ENDPOINTS=$(echo $CLIENT_INFO | jq -r '.monAddresses[]' | awk -F '/' 'BEGIN { ORS="," }; {print $1}' | sed 's/,$//')
     KEYRING_FILE="/etc/ceph/keyring"
 
+    mkdir -p /etc/ceph
     cat <<EOF > ${CEPH_CONFIG}
 [global]
 mon_host = ${MON_ENDPOINTS}
