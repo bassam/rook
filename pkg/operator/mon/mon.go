@@ -35,7 +35,7 @@ import (
 var logger = capnslog.NewPackageLogger("github.com/rook/rook", "op-mon")
 
 const (
-	appName           = "mon"
+	appName           = "rook-cephmon"
 	monNodeAttr       = "mon_node"
 	monClusterAttr    = "mon_cluster"
 	tprName           = "mon.rook.io"
@@ -166,7 +166,7 @@ func (c *Cluster) getExpectedMonConfig() []*MonConfig {
 	// initialize mon info if we don't have enough mons (at first startup)
 	for i := len(c.clusterInfo.Monitors); i < c.Size; i++ {
 		c.maxMonID++
-		mons = append(mons, &MonConfig{Name: fmt.Sprintf("mon%d", c.maxMonID), Port: int32(mon.Port)})
+		mons = append(mons, &MonConfig{Name: fmt.Sprintf("%s%d", appName, c.maxMonID), Port: int32(mon.Port)})
 	}
 
 	return mons
@@ -477,7 +477,7 @@ func validNode(node v1.Node) bool {
 }
 
 func (c *Cluster) getNodesWithMons() (*util.Set, error) {
-	options := metav1.ListOptions{LabelSelector: fmt.Sprintf("app=mon")}
+	options := metav1.ListOptions{LabelSelector: fmt.Sprintf("app=%s", appName)}
 	pods, err := c.context.Clientset.CoreV1().Pods(c.Namespace).List(options)
 	if err != nil {
 		return nil, err
