@@ -35,8 +35,8 @@ import (
 var logger = capnslog.NewPackageLogger("github.com/rook/rook", "op-osd")
 
 const (
-	appName    = "rook-cephosd"
-	appNameFmt = "rook-cephosd-%s"
+	appName    = "rook-ceph-osd"
+	appNameFmt = "rook-ceph-osd-%s"
 )
 
 type Cluster struct {

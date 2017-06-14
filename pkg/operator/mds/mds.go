@@ -33,7 +33,7 @@ import (
 var logger = capnslog.NewPackageLogger("github.com/rook/rook", "op-mds")
 
 const (
-	appName            = "rook-cephmds"
+	appName            = "rook-ceph-mds"
 	dataPoolSuffix     = "-data"
 	metadataPoolSuffix = "-metadata"
 	keyringName        = "keyring"
