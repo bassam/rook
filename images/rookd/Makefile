@@ -69,5 +69,5 @@ build.images: rookd-base-image
 	@cp ../../bin/linux_$(GOARCH)/rookd $(TEMP)
 	@cd $(TEMP) && $(SED_CMD) 's|BASEIMAGE|$(ROOKD_BASE_IMAGE)|g' Dockerfile
 	@docker build $(BUILD_ARGS) -t $(ROOKD_IMAGE) $(TEMP)
-	@[ "$(OLD_IMAGE_ID)" = "$(CURRENT_IMAGE_ID)" ] || docker rmi $(OLD_IMAGE_ID)
+	@[ "$(OLD_IMAGE_ID)" != "$(CURRENT_IMAGE_ID)" ] && [ -n "$(OLD_IMAGE_ID)" ] && docker rmi $(OLD_IMAGE_ID) || true
 	@rm -fr $(TEMP)
