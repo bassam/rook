@@ -34,6 +34,7 @@ var logger = capnslog.NewPackageLogger("github.com/rook/rook", "op-mgr")
 const (
 	appName     = "cephmgr"
 	keyringName = "keyring"
+	mgrCount    = 2
 )
 
 type Cluster struct {
@@ -59,22 +60,24 @@ func New(context *clusterd.Context, name, namespace, version string) *Cluster {
 func (c *Cluster) Start() error {
 	logger.Infof("start running mgr")
 
-	name := "1"
-	err := c.createKeyring(c.Name, name)
-	if err != nil {
-		return fmt.Errorf("failed to create mds keyring. %+v", err)
-	}
-
-	// start the deployment
-	deployment := c.makeDeployment(name)
-	_, err = c.context.Clientset.ExtensionsV1beta1().Deployments(c.Namespace).Create(deployment)
-	if err != nil {
-		if !errors.IsAlreadyExists(err) {
-			return fmt.Errorf("failed to create mgr deployment. %+v", err)
+	for i := 1; i <= mgrCount; i++ {
+		name := fmt.Sprintf("%s%d", appName, i)
+		err := c.createKeyring(c.Name, name)
+		if err != nil {
+			return fmt.Errorf("failed to create mgr keyring. %+v", err)
 		}
-		logger.Infof("mgr deployment already exists")
-	} else {
-		logger.Infof("mgr deployment started")
+
+		// start the deployment
+		deployment := c.makeDeployment(name)
+		_, err = c.context.Clientset.ExtensionsV1beta1().Deployments(c.Namespace).Create(deployment)
+		if err != nil {
+			if !errors.IsAlreadyExists(err) {
+				return fmt.Errorf("failed to create mgr deployment. %+v", err)
+			}
+			logger.Infof("%s deployment already exists", name)
+		} else {
+			logger.Infof("%s deployment started", name)
+		}
 	}
 
 	return nil
@@ -82,12 +85,12 @@ func (c *Cluster) Start() error {
 
 func (c *Cluster) makeDeployment(name string) *extensions.Deployment {
 	deployment := &extensions.Deployment{}
-	deployment.Name = appName
+	deployment.Name = name
 	deployment.Namespace = c.Namespace
 
 	podSpec := v1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        appName,
+			Name:        name,
 			Labels:      c.getLabels(),
 			Annotations: map[string]string{},
 		},
@@ -111,7 +114,7 @@ func (c *Cluster) mgrContainer(name string) v1.Container {
 	return v1.Container{
 		// FIX: sleep 5 for a flaky network setup
 		Command: []string{"/bin/sh", "-c", fmt.Sprintf("sleep 5; %s", command)},
-		Name:    appName,
+		Name:    name,
 		Image:   k8sutil.MakeRookImage(c.Version),
 		VolumeMounts: []v1.VolumeMount{
 			{Name: k8sutil.DataDirVolume, MountPath: k8sutil.DataDir},
@@ -119,7 +122,7 @@ func (c *Cluster) mgrContainer(name string) v1.Container {
 		},
 		Env: []v1.EnvVar{
 			{Name: "ROOKD_MGR_NAME", Value: name},
-			{Name: "ROOKD_MGR_KEYRING", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: appName}, Key: keyringName}}},
+			{Name: "ROOKD_MGR_KEYRING", ValueFrom: &v1.EnvVarSource{SecretKeyRef: &v1.SecretKeySelector{LocalObjectReference: v1.LocalObjectReference{Name: name}, Key: keyringName}}},
 			opmon.ClusterNameEnvVar(c.Name),
 			opmon.MonEndpointEnvVar(),
 			opmon.MonSecretEnvVar(),
@@ -137,7 +140,7 @@ func (c *Cluster) getLabels() map[string]string {
 }
 
 func (c *Cluster) createKeyring(clusterName, name string) error {
-	_, err := c.context.Clientset.CoreV1().Secrets(c.Namespace).Get(appName, metav1.GetOptions{})
+	_, err := c.context.Clientset.CoreV1().Secrets(c.Namespace).Get(name, metav1.GetOptions{})
 	if err == nil {
 		logger.Infof("the mgr keyring was already generated")
 		return nil
@@ -157,7 +160,7 @@ func (c *Cluster) createKeyring(clusterName, name string) error {
 		keyringName: keyring,
 	}
 	secret := &v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: appName, Namespace: c.Namespace},
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: c.Namespace},
 		StringData: secrets,
 		Type:       k8sutil.RookType,
 	}
