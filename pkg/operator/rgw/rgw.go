@@ -33,7 +33,7 @@ import (
 var logger = capnslog.NewPackageLogger("github.com/rook/rook", "op-rgw")
 
 const (
-	appName     = "rgw"
+	appName     = "rook-cephrgw"
 	keyringName = "keyring"
 )
 
