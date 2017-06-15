@@ -66,7 +66,11 @@ func ListImages(context *clusterd.Context, clusterName, poolName string) ([]Ceph
 
 func CreateImage(context *clusterd.Context, clusterName, name, poolName string, size uint64) (*CephBlockImage, error) {
 	imageSpec := getImageSpec(name, poolName)
-	sizeMB := int(size / 1024)
+	sizeMB := int(size / 1024 / 1024)
+	if sizeMB <= 0 {
+		return nil, fmt.Errorf("invalid size: %d", size)
+	}
+
 	args := []string{"create", imageSpec, "--size", strconv.Itoa(sizeMB)}
 	buf, err := ExecuteRBDCommandNoFormat(context, clusterName, args)
 	if err != nil {
