@@ -62,13 +62,13 @@ func (s *clusterHandler) RemoveObjectStore() error {
 
 func (s *clusterHandler) GetObjectStoreConnectionInfo() (*model.ObjectStoreConnectInfo, bool, error) {
 	logger.Infof("Getting the object store connection info")
-	service, err := s.context.Clientset.CoreV1().Services(s.namespace).Get("rgw", metav1.GetOptions{})
+	service, err := s.context.Clientset.CoreV1().Services(s.namespace).Get("rook-ceph-rgw", metav1.GetOptions{})
 	if err != nil {
 		return nil, false, fmt.Errorf("failed to get rgw service. %+v", err)
 	}
 
 	info := &model.ObjectStoreConnectInfo{
-		Host:       "rook-rgw",
+		Host:       "rook-ceph-rgw",
 		IPEndpoint: rgw.GetRGWEndpoint(service.Spec.ClusterIP),
 	}
 	logger.Infof("Object store connection: %+v", info)
