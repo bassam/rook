@@ -128,7 +128,7 @@ func TestCreateImageHandler(t *testing.T) {
 	assert.Equal(t, ``, w.Body.String())
 
 	// well formed successful request to create an image
-	req, err = http.NewRequest("POST", "http://10.0.0.100/image", strings.NewReader(`{"imageName":"myImage1","poolName":"myPool1","size":1024}`))
+	req, err = http.NewRequest("POST", "http://10.0.0.100/image", strings.NewReader(`{"imageName":"myImage1","poolName":"myPool1","size":1048576}`))
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -137,7 +137,7 @@ func TestCreateImageHandler(t *testing.T) {
 		case command == "rbd" && args[0] == "create":
 			return "", nil
 		case command == "rbd" && args[0] == "ls" && args[1] == "-l":
-			return `[{"image":"myImage1","size":1024,"format":2}]`, nil
+			return `[{"image":"myImage1","size":1048576,"format":2}]`, nil
 		}
 		return "", fmt.Errorf("unexpected ceph command '%v'", args)
 	}
