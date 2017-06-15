@@ -101,7 +101,7 @@ clean.images:
 				fi; \
 			done; \
 			echo cleaning image $$i; \
-			docker rmi $$i; \
+			docker rmi $$i > /dev/null 2>&1 || true; \
 		fi; \
 	done
 
