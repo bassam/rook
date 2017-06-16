@@ -110,7 +110,7 @@ go.build.packages: go.build.packages.$(1)
 
 go.install.packages.$(1):
 	@echo === go install $(1) $(GOOS)_$(GOARCH)
-	@CGO_ENABLED=$(3) $(GO) install -v $(4) $(2)
+	@$(3) $(GO) install -v $(4) $(2)
 go.install.packages: go.install.packages.$(1)
 endef
 
@@ -127,8 +127,8 @@ go.install:
 .PHONY: go.test
 go.test:
 	@echo === go test
-	@$(GOHOST) test -v -i -cover $(GO_STATIC_FLAGS) $(GO_ALL_PACKAGES)
-	@$(GOHOST) test -cover $(GO_STATIC_FLAGS) $(GO_ALL_PACKAGES)
+	@CGO_ENABLED=0 $(GOHOST) test -v -i -cover $(GO_STATIC_FLAGS) $(GO_ALL_PACKAGES)
+	@CGO_ENABLED=0 $(GOHOST) test -cover $(GO_STATIC_FLAGS) $(GO_ALL_PACKAGES)
 
 .PHONY: go.lint
 go.lint: $(GOLINT)
