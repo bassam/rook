@@ -48,19 +48,18 @@ endif
 
 # the working directory to store packages and intermediate build files
 ifeq ($(origin WORKDIR), undefined)
-WORKDIR := $(realpath .work)
+WORKDIR := $(abspath .work)
 endif
 ifeq ($(origin DOWNLOADDIR), undefined)
-DOWNLOADDIR := $(realpath .download)
+DOWNLOADDIR := $(abspath .download)
 endif
 
 # bin and relase dirs
-ifeq ($(origin BIN_DIR), undefined)
-BIN_DIR ?= $(realpath bin)
+ifeq ($(origin BIN_DIR),undefined)
+BIN_DIR := $(abspath bin)
 endif
-
 ifeq ($(origin RELEASE_DIR), undefined)
-RELEASE_DIR ?= $(realpath release)
+RELEASE_DIR := $(abspath release)
 endif
 
 # platforms where we only build client bits
