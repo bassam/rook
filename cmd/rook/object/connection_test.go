@@ -45,7 +45,7 @@ func TestGetConnectionInfo(t *testing.T) {
 
 	// verify pretty format output
 	expectedOut := "NAME                    VALUE\n" +
-		"AWS_HOST                rook-ceph-rgw:12345                             \n" +
+		"AWS_HOST                rook-ceph-rgw:12345                        \n" +
 		"AWS_ENDPOINT            1.2.3.4:12345                              \n" +
 		"AWS_ACCESS_KEY_ID       UST0JAP8CE61FDE0Q4BE                       \n" +
 		"AWS_SECRET_ACCESS_KEY   tVCuH20xTokjEpVJc7mKjL8PLTfGh4NZ3le3zg9X   \n"
