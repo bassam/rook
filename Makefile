@@ -143,6 +143,8 @@ build: build.common
 ifneq ($(GOOS),linux)
 	@$(MAKE) go.build GOOS=linux GOARCH=amd64
 	@$(MAKE) -C images GOOS=linux GOARCH=amd64
+else
+	@$(MAKE) -C images
 endif
 
 build.all: build.common
