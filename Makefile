@@ -139,7 +139,12 @@ do.build.platform.%:
 do.build.parallel: $(foreach p,$(PLATFORMS), do.build.platform.$(p))
 
 build: build.common
-	@$(MAKE) do.build
+	@$(MAKE) go.build
+# if building on the mac, also build the linux container
+ifneq ($(GOOS),linux)
+	@$(MAKE) go.build GOOS=linux GOARCH=amd64
+	@$(MAKE) -C images GOOS=linux GOARCH=amd64
+endif
 
 build.all: build.common
 	@$(MAKE) do.build.parallel
