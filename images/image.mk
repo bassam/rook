@@ -14,16 +14,9 @@
 
 SELF_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
-include $(SELF_DIR)/../build/makelib/cross.mk
+include $(SELF_DIR)/../build/makelib/common.mk
 
 CACHE_REGISTRY := cache
-
-# a registry that is scoped to the current build tree on this host
-ifeq ($(origin BUILD_REGISTRY), undefined)
-HOSTNAME := $(shell hostname)
-ROOTDIR := $(shell cd $(SELF_DIR)/.. && pwd -P)
-BUILD_REGISTRY := build-$(shell echo $(HOSTNAME)-$(ROOTDIR) | shasum -a 256 | cut -c1-8)
-endif
 
 # public registry used for images that are pushed
 REGISTRY ?= quay.io/rook

@@ -16,7 +16,7 @@
 .PHONY: all
 all: build
 
-include build/makelib/cross.mk
+include build/makelib/common.mk
 
 # ====================================================================================
 # Build Options
@@ -48,15 +48,20 @@ endif
 
 # the working directory to store packages and intermediate build files
 ifeq ($(origin WORKDIR), undefined)
-WORKDIR := $(abspath .work)
+WORKDIR := $(realpath .work)
 endif
 ifeq ($(origin DOWNLOADDIR), undefined)
-DOWNLOADDIR := $(abspath .download)
+DOWNLOADDIR := $(realpath .download)
 endif
 
 # bin and relase dirs
-BIN_DIR ?= bin
-RELEASE_DIR ?= release
+ifeq ($(origin BIN_DIR), undefined)
+BIN_DIR ?= $(realpath bin)
+endif
+
+ifeq ($(origin RELEASE_DIR), undefined)
+RELEASE_DIR ?= $(realpath release)
+endif
 
 # platforms where we only build client bits
 CLIENT_PLATFORMS ?= darwin_amd64 windows_amd64
