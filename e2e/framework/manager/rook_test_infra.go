@@ -172,6 +172,9 @@ func (r *rookTestInfraManager) copyImageToNode(containerId string, imageName str
 		fmt.Println("Image does not exist locally")
 	}
 
+	cmdOut = utils.ExecuteCommand(objects.CommandArgs{Command: "docker", CmdArgs: []string{"images"}})
+	fmt.Printf("Did not find docker images %s locally\nDocker images:\n%s\n", imageName, cmdOut.StdOut)
+
 	if strings.EqualFold(cmdOut.StdOut, "") {
 		fmt.Println("searching remotely for the docker image: " + imageName)
 		cmdOut := utils.ExecuteCommand(objects.CommandArgs{Command: "docker", CmdArgs: []string{"pull", imageName}})
@@ -307,7 +310,7 @@ func createK8sRookOperator(k8sHelper *utils.K8sHelper, tag string) error {
 	return nil
 }
 
-func createK8sRookClient(k8sHelper *utils.K8sHelper, tag string) (err error) {
+func createK8sRookToolbox(k8sHelper *utils.K8sHelper, tag string) (err error) {
 
 	//Create rook client
 	raw, err := ioutil.ReadFile(path.Join(getPodSpecPath(), rookToolsFileName))
@@ -425,7 +428,7 @@ func (r *rookTestInfraManager) InstallRook(tag string, skipInstall bool) (err er
 	time.Sleep(5 * time.Second)
 
 	//Create rook client
-	err = createK8sRookClient(k8sHelp, rookToolboxTag)
+	err = createK8sRookToolbox(k8sHelp, rookToolboxTag)
 
 	if err != nil {
 		panic(err)
