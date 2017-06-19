@@ -10,13 +10,14 @@ import (
 	"sync"
 	"time"
 
+	"os"
+	"path/filepath"
+
 	"github.com/rook/rook/e2e/framework/contracts"
 	"github.com/rook/rook/e2e/framework/enums"
 	"github.com/rook/rook/e2e/framework/objects"
 	"github.com/rook/rook/e2e/framework/transport"
 	"github.com/rook/rook/e2e/framework/utils"
-	"os"
-	"path/filepath"
 )
 
 type rookTestInfraManager struct {
@@ -48,7 +49,7 @@ const (
 	rookOperatorImagePodSpecTag    = "quay.io/rook/rookd:master-latest"
 	rookClientImagePodSpecTag      = "quay.io/rook/rook:master-latest"
 	rookOperatorPrefix             = "quay.io/rook/rookd"
-	rookClientPrefix               = "quay.io/rook/rook"
+	rookClientPrefix               = "quay.io/rook/toolbox"
 	rookOperatorCreatedTpr         = "cluster.rook.io"
 	masterContinerName             = "kube-master"
 	node1ContinerName              = "kube-node-1"
