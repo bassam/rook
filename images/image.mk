@@ -44,11 +44,6 @@ SED_CMD?=sed -i
 SELF_CID := $(shell cat /proc/self/cgroup | grep docker | grep -o -E '[0-9a-f]{64}' | head -n 1)
 endif
 
-INTERACTIVE:=$(shell [ -t 0 ] && echo 1)
-ifdef INTERACTIVE
-RUN_ARGS ?= -t
-endif
-
 CACHEBUST ?= 0
 ifeq ($(CACHEBUST),1)
 BUILD_ARGS += --no-cache
