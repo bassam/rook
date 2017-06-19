@@ -40,16 +40,16 @@ const (
 	tempImageFileName              = "temp_image.tar"
 	rookOperatorFileName           = "rook-operator.yaml"
 	rookClusterFileName            = "rook-cluster.yaml"
-	rookClientFileName             = "rook-client.yaml"
+	rookToolsFileName              = "rook-tools.yaml"
 	podSpecPath                    = "src/github.com/rook/rook/demo/kubernetes"
 	scriptsPath                    = "scripts"
 	k8sFalsePostiveSuccessErrorMsg = "exit status 1" //When kubectl drain is executed, exit status 1 is always returned in stdout
 	rookDindK8sClusterScriptv1_5   = "rook-dind-cluster-v1.5.sh"
 	rookDindK8sClusterScriptv1_6   = "rook-dind-cluster-v1.6.sh"
 	rookOperatorImagePodSpecTag    = "quay.io/rook/rookd:master-latest"
-	rookClientImagePodSpecTag      = "quay.io/rook/rook:master-latest"
+	rookToolsImagePodSpecTag       = "quay.io/rook/toolbox:master-latest"
 	rookOperatorPrefix             = "quay.io/rook/rookd"
-	rookClientPrefix               = "quay.io/rook/toolbox"
+	rookToolboxPrefix              = "quay.io/rook/toolbox-amd64"
 	rookOperatorCreatedTpr         = "cluster.rook.io"
 	masterContinerName             = "kube-master"
 	node1ContinerName              = "kube-node-1"
@@ -310,17 +310,17 @@ func createK8sRookOperator(k8sHelper *utils.K8sHelper, tag string) error {
 func createK8sRookClient(k8sHelper *utils.K8sHelper, tag string) (err error) {
 
 	//Create rook client
-	raw, err := ioutil.ReadFile(path.Join(getPodSpecPath(), rookClientFileName))
+	raw, err := ioutil.ReadFile(path.Join(getPodSpecPath(), rookToolsFileName))
 
 	if err != nil {
 		panic(err)
 	}
 
-	if !bytes.Contains(raw, []byte(rookClientImagePodSpecTag)) {
-		return fmt.Errorf(" %s tag to be replaced with %s couldn't be found in rook-client.yaml", rookClientImagePodSpecTag, tag)
+	if !bytes.Contains(raw, []byte(rookToolsImagePodSpecTag)) {
+		return fmt.Errorf(" %s tag to be replaced with %s couldn't be found in rook-tools.yaml", rookToolsImagePodSpecTag, tag)
 	}
 
-	rawUpdated := bytes.Replace(raw, []byte(rookClientImagePodSpecTag), []byte(tag), 1)
+	rawUpdated := bytes.Replace(raw, []byte(rookToolsImagePodSpecTag), []byte(tag), 1)
 	rookClient := string(rawUpdated)
 
 	_, _, exitCode := r.transportClient.CreateWithStdin(rookClient)
@@ -329,10 +329,10 @@ func createK8sRookClient(k8sHelper *utils.K8sHelper, tag string) (err error) {
 		return fmt.Errorf(string(exitCode))
 	}
 
-	if !k8sHelper.IsPodRunningInNamespace("rook-client") {
-		return fmt.Errorf("Rook Client couldn't start")
+	if !k8sHelper.IsPodRunningInNamespace("rook-tools") {
+		return fmt.Errorf("Rook Toolbox couldn't start")
 	} else {
-		fmt.Println("Rook Client started")
+		fmt.Println("Rook Toolbox started")
 	}
 
 	return nil
@@ -375,7 +375,7 @@ func (r *rookTestInfraManager) InstallRook(tag string, skipInstall bool) (err er
 	}
 
 	rookOperatorTag := rookOperatorPrefix + ":" + tag
-	rookClientTag := rookClientPrefix + ":" + tag
+	rookToolboxTag := rookToolboxPrefix + ":" + tag
 
 	err = r.copyImageToNode(r.getContainerIdByName(masterContinerName), rookOperatorTag)
 	if err != nil {
@@ -391,17 +391,17 @@ func (r *rookTestInfraManager) InstallRook(tag string, skipInstall bool) (err er
 	if err != nil {
 		panic(err)
 	}
-	err = r.copyImageToNode(r.getContainerIdByName(masterContinerName), rookClientTag)
+	err = r.copyImageToNode(r.getContainerIdByName(masterContinerName), rookToolboxTag)
 	if err != nil {
 		panic(err)
 	}
 
-	err = r.copyImageToNode(r.getContainerIdByName(node1ContinerName), rookClientTag)
+	err = r.copyImageToNode(r.getContainerIdByName(node1ContinerName), rookToolboxTag)
 	if err != nil {
 		panic(err)
 	}
 
-	err = r.copyImageToNode(r.getContainerIdByName(node2ContinerName), rookClientTag)
+	err = r.copyImageToNode(r.getContainerIdByName(node2ContinerName), rookToolboxTag)
 	if err != nil {
 		panic(err)
 	}
@@ -425,7 +425,7 @@ func (r *rookTestInfraManager) InstallRook(tag string, skipInstall bool) (err er
 	time.Sleep(5 * time.Second)
 
 	//Create rook client
-	err = createK8sRookClient(k8sHelp, rookClientTag)
+	err = createK8sRookClient(k8sHelp, rookToolboxTag)
 
 	if err != nil {
 		panic(err)
