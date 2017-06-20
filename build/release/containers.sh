@@ -47,8 +47,6 @@ build() {
     [[ ${os} == "linux" ]] || return 0
 
     build_image $os $arch rookd
-
-    [[ ${arch} == "amd64" ]] || return 0
     build_image $os $arch toolbox
 }
 
@@ -78,8 +76,6 @@ publish() {
     [[ ${os} == "linux" ]] || return 0
 
     publish_image $os $arch rookd
- 
-    [[ ${arch} == "amd64" ]] || return 0
     publish_image $os $arch toolbox
 }
 
@@ -107,9 +103,8 @@ promote() {
     [[ ${os} == "linux" ]] || return 0
 
     promote_image $os $arch rookd
-
-    [[ ${arch} == "amd64" ]] || return 0
     promote_image $os $arch toolbox
+
 }
 
 cleanup_image() {
@@ -136,9 +131,8 @@ cleanup() {
     local arch=$2
 
     [[ ${os} == "linux" ]] || return 0
-    cleanup_image $os $arch rookd
 
-    [[ ${arch} == "amd64" ]] || return 0
+    cleanup_image $os $arch rookd
     cleanup_image $os $arch toolbox
 }
 
