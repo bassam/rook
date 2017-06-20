@@ -47,6 +47,9 @@ build() {
     [[ ${os} == "linux" ]] || return 0
 
     build_image $os $arch rookd
+
+    [[ ${arch} == "amd64" ]] || return 0
+    build_image $os $arch toolbox
 }
 
 publish_image() {
